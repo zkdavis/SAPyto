@@ -2,12 +2,38 @@ import scipy.special as scisp
 import numpy as np
 import scipy.integrate as integrate
 import misc
+import logfuns as lf
 
 
 class magnetobrem:
 
+    # NOTE Constants
+    cLight = 2.99792458e10
+    mp = 1.67262158e-24
+    me = 9.10938188e-28
+    eCharge = 4.803204e-10
+    sigmaT = 6.6524586e-25
+    hPlanck = 6.629069e-27
+    nuconst = 2.7992491077281560779657886e6  # eCharge / 2 * pi * m_e * cLight
+
     def __init__(self):
         print('Magneto-Bremstrahlung')
+
+    def nu_g(self, B, Z=1.0, m=me):
+        '''Cyclotron frequency'''
+        return Z * self.eCharge * B / (2.0 * np.pi * m * self.cLight)
+
+    def nu_B(self, B, g, Z=1.0, m=me):
+        '''Gyrofrequency'''
+        return Z * self.eCharge * B / (2.0 * np.pi * g * m * self.cLight)
+
+    def nu_c(self, B, g):
+        '''Synchrotron critical frequency'''
+        return 0.5 * 3.0 * self.nu_B(B, g) * g**3
+
+    def chi(self, nu, B, g):
+        '''Harmonic frequency'''
+        return nu / self.nu_g(B, g)
 
     def Fsync(self, xx, asym_low=False, asym_high=False):
         '''Synchrotron function'''
@@ -37,7 +63,7 @@ class magnetobrem:
         '''Approximation in Schlickeiser & Lerche (2007)'''
         return 1.5 * x * np.power(x, -2.0/3.0) / (0.869 + np.power(x, 1.0/3.0) * np.exp(x))
 
-    def FDBfit(self, x):
+    def FDB08fit(self, x):
         '''Fit by Finke, Dermer & Boettcher (2008)'''
 
         def A(x):
@@ -46,8 +72,7 @@ class magnetobrem:
                             - 1.1449608 * np.power(np.log10(x), 2)
                             - 0.68137283 * np.power(np.log10(x), 3)
                             - 0.22754737 * np.power(np.log10(x), 4)
-                            - 0.031967334 * np.power(np.log10(x), 5)
-                            )
+                            - 0.031967334 * np.power(np.log10(x), 5))
 
         def B(x):
             return np.power(10.0, - 0.35842494
@@ -55,25 +80,17 @@ class magnetobrem:
                             - 1.6113032 * np.power(np.log10(x), 2)
                             + 0.26055213 * np.power(np.log10(x), 3)
                             - 1.6979017 * np.power(np.log10(x), 4)
-                            + 0.032955035 * np.power(np.log10(x), 5)
-                            )
+                            + 0.032955035 * np.power(np.log10(x), 5))
 
-        def theFit(x):
-            if x < 0.01:
-                return self.Rsync(x, asym_low=True)
-            elif x >= 0.01 and x < 1.0:
-                return A(x)
-            elif x >= 1.0 and x < 10.0:
-                return B(x)
-            else:
-                return self.Rsync(x, asym_high=True)
-
-        if type(x) is float:
-            return theFit(x)
-        elif type(x) in [list, np.ndarray]:
-            return np.asarray([theFit(ex) for ex in x])
-        else:
-            return("Wrong type for argument x")
+        return np.piecewise(x,
+                            [x < 0.01,
+                             x >= 0.01 and x < 1.0,
+                             x >= 1.0 and x < 10.0,
+                             x > 10.0],
+                            [self.Rsync(x, asym_low=True),
+                             A(x),
+                             B(x),
+                             self.Rsync(x, asym_high=True)])
 
     #  ######  #     #    #
     #  #     # ##   ##   # #
@@ -83,14 +100,14 @@ class magnetobrem:
     #  #    #  #     # #     #
     #  #     # #     # #     #
 
-    def RMAfit(self, chi, g):
+    def RMAfit(self, c, g):
         '''Fit by Rueda-Becerril (2017)'''
 
         c1 = 3.2180900500625734e-4
         c2 = 0.650532122717873
         c3 = 15.579904689804556
 
-        x = 2.0 * chi / (3.0 * g**2)
+        def Xc(c, g): return 2.0 * c / (3.0 * np.power(g, 2))
 
         def A(x):
             return np.power(10.0, - 0.7871626401625178
@@ -110,24 +127,23 @@ class magnetobrem:
                             - 0.028650695862677572 * np.power(np.log10(x), 5)
                             )
 
-        def theFit(x):
-            if x < c1:
-                return 1.8084180211028020864 * np.power(x, 1.0 / 3.0)
-            elif x >= c1 and x <= c2:
-                return A(x)
-            elif x > c2 and x < c3:
-                return B(x)
-            else:
-                return np.pi * np.exp(-x) * (1.0 - 11.0 / (18.0 * x))
-
-        if type(chi) is float:
-            if x < 0.8 / g:
-                return 0.0
-            else:
-                return theFit(x)
-        elif type(chi) in [list, np.ndarray]:
+        def theFit(c, g):
+            x = Xc(c, g)
             return np.piecewise(x,
-                                [chi * g <= 0.8, chi * g > 0.8],
-                                [lambda x: 0.0, lambda x: theFit(x)])
-        else:
-            return("Wrong type for argument x")
+                                [x < c1,
+                                 x >= c1 and x <= c2,
+                                 x > c2 and x < c3,
+                                 x >= c3],
+                                [lambda x: 1.8084180211028020864 * np.power(x, 1.0 / 3.0),
+                                 lambda x: A(x),
+                                 lambda x: B(x),
+                                 lambda x: np.pi * np.exp(-x) * (1.0 - 11.0 / (18.0 * x))])
+
+        return np.piecewise(c,
+                            [c * g <= 0.8, c * g > 0.8],
+                            [0.0, lambda x: theFit(x, g)])
+
+    def RMA(self, c, g):
+        def Xc(c, g): return 2.0 * c / (3.0 * np.power(g, 2))
+        return np.piecewise(c, [c * g < 0.8, c * g >= 0.8],
+                            [0.0, lambda c: Xc(c) * self.SL07(Xc(c))])

@@ -5,6 +5,11 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.colors as col
 import extractor as extr
+import misc
+
+# TODO produce spectra from nearest t
+# TODO produce spectra from integrating light curve over time
+# TODO produce light curve from integrated spectra over frequencies
 
 
 class SAPyto:
@@ -12,15 +17,6 @@ class SAPyto:
 
     It will be assumed that the input flux is a NxM matrix, whose first entry is corresponds to the time and the second to the frequencies.
     '''
-    #
-    # NOTE Constants
-    cLight = 2.99792458e10
-    mp = 1.67262158e-24
-    me = 9.10938188e-28
-    eCharge = 4.803204e-10
-    sigmaT = 6.6524586e-25
-    hPlanck = 6.629069e-27
-    nuconst = 2.7992491077281560779657886e6  # eCharge / 2 * pi * m_e * cLight
 
     def __init__(self):
         print('Debes bailar como baila el sapito, dando brinquitos.')
