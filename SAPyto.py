@@ -7,15 +7,9 @@ import matplotlib.colors as col
 import extractor as extr
 
 
-def find_nearest(arr, val):
-    arr = np.asarray(arr)
-    i = (np.abs(arr - val)).argmin()
-    return i, arr[i]
-
-
 class SAPyto:
     ''' ***  Spectral Analysis with Python toolkit  ***
-    
+
     It will be assumed that the input flux is a NxM matrix, whose first entry is corresponds to the time and the second to the frequencies.
     '''
     #
@@ -71,7 +65,8 @@ class SAPyto:
     #  ###### #  ####  #    #   #    ####   ####  #    #   ##   ######  ####
     #
     def nearLC(self, nu_in, nus, flux):
-        '''This function returns the light curve of the frequency nearest to the one given (nu_in).
+        '''This function returns the light curve of the frequency nearest to
+        the one given (nu_in).
         '''
         i_nu, nu = find_nearest(nus, nu_in)
         return flux[:, i_nu]
@@ -108,4 +103,4 @@ class SAPyto:
     #  #    # #      #      #    #   #   #   #  #    #
     #   ####  #      ######  ####    #   #    # #    #
     #
-    def spectrum(self, t_min)
+    def spectrum(self, t_min):
