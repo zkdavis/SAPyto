@@ -1,20 +1,19 @@
 import scipy.special as scisp
 import numpy as np
 import scipy.integrate as integrate
+from astropy import constants as const
 import misc
-import logfuns as lf
 
 
-class magnetobrem:
+class mbs:
 
-    # NOTE Constants
-    cLight = 2.99792458e10
-    mp = 1.67262158e-24
-    me = 9.10938188e-28
-    eCharge = 4.803204e-10
-    sigmaT = 6.6524586e-25
-    hPlanck = 6.629069e-27
-    nuconst = 2.7992491077281560779657886e6  # eCharge / 2 * pi * m_e * cLight
+    cLight = const.c.cgs.value
+    eCharge = const.e.gauss.value
+    hPlanck = const.h.cgs.value
+    me = const.m_e.cgs.value
+    mp = const.m_p.cgs.value
+    sigmaT = const.sigma_T.cgs.value
+    nuconst = eCharge / (2.0 * np.pi * me * cLight)
 
     def __init__(self):
         print('Magneto-Bremstrahlung')

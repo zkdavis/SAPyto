@@ -12,45 +12,33 @@ import misc
 # TODO produce light curve from integrated spectra over frequencies
 
 
-class SAPyto:
-    ''' ***  Spectral Analysis with Python toolkit  ***
-
-    It will be assumed that the input flux is a NxM matrix, whose first entry is corresponds to the time and the second to the frequencies.
+def conv2Jy(self, flux):
+    '''Convert flux density (in egs cm^{-2} s^{-1} Hz^{-1}) janskys.
     '''
+    return flux * 1e23
 
-    def __init__(self):
-        print('Debes bailar como baila el sapito, dando brinquitos.')
-
-    #
-    #  #####  #       ####  ##### ##### # #    #  ####
-    #  #    # #      #    #   #     #   # ##   # #    #
-    #  #    # #      #    #   #     #   # # #  # #
-    #  #####  #      #    #   #     #   # #  # # #  ###
-    #  #      #      #    #   #     #   # #   ## #    #
-    #  #      ######  ####    #     #   # #    #  ####
-    #
-    def init_plot(self, style='bmh'):
-        plt.style.use(style)
-
-    def print_or_show(self, plt_name, do_print=False, fmt='pdf'):
-        '''This function will print the data
-        '''
-
-        if do_print:
-            fig.savefig(pname + '.' + fmt,
-                        format=fmt,
-                        dpi=300  # ,
-                        # rasterized=True,
-                        # transparent=True
-                        )
-        else:
-            fig.suptitle(pname)
-            fig.show()
-
-    def convert2Jy(self, flux):
-        '''Convert flux density (in egs cm^{-2} s^{-1} Hz^{-1}) janskys.
-        '''
-        return flux * 1e23
+#
+#  #####  #       ####  ##### ##### # #    #  ####
+#  #    # #      #    #   #     #   # ##   # #    #
+#  #    # #      #    #   #     #   # # #  # #
+#  #####  #      #    #   #     #   # #  # # #  ###
+#  #      #      #    #   #     #   # #   ## #    #
+#  #      ######  ####    #     #   # #    #  ####
+#
+# def print_or_show(self, plt_name, do_print=False, fmt='pdf'):
+#     '''This function will print the data
+#     '''
+#
+#     if do_print:
+#         fig.savefig(pname + '.' + fmt,
+#                     format=fmt,
+#                     dpi=300  # ,
+#                     # rasterized=True,
+#                     # transparent=True
+#                     )
+#     else:
+#         fig.suptitle(pname)
+#         fig.show()
 
     #
     #  #      #  ####  #    # #####  ####  #    # #####  #    # ######  ####
@@ -60,6 +48,7 @@ class SAPyto:
     #  #      # #    # #    #   #   #    # #    # #   #   #  #  #      #    #
     #  ###### #  ####  #    #   #    ####   ####  #    #   ##   ######  ####
     #
+
     def nearLC(self, nu_in, nus, flux):
         '''This function returns the light curve of the frequency nearest to
         the one given (nu_in).
@@ -88,8 +77,6 @@ class SAPyto:
         freqs_masked = ma.masked_outside(freqs, nu_min, nu_max)
         freqs_band = freqs_masked.compressed()
         nu_count = len(freqs_band)
-
-        # for nu in freqs_band:
 
     #
     #   ####  #####  ######  ####  ##### #####    ##
