@@ -1,10 +1,10 @@
 import os
 import numpy as np
 import numpy.ma as ma
-import matplotlib as mpl
-import matplotlib.pyplot as plt
-import matplotlib.colors as col
-import extractor as extr
+# import matplotlib as mpl
+# import matplotlib.pyplot as plt
+# import matplotlib.colors as col
+#import extractor as extr
 import misc
 
 # TODO produce spectra from nearest t
@@ -12,7 +12,7 @@ import misc
 # TODO produce light curve from integrated spectra over frequencies
 
 
-def conv2Jy(self, flux):
+def conv2Jy(flux):
     '''Convert flux density (in egs cm^{-2} s^{-1} Hz^{-1}) janskys.
     '''
     return flux * 1e23
@@ -40,30 +40,36 @@ def conv2Jy(self, flux):
 #         fig.suptitle(pname)
 #         fig.show()
 
-    #
-    #  #      #  ####  #    # #####  ####  #    # #####  #    # ######  ####
-    #  #      # #    # #    #   #   #    # #    # #    # #    # #      #
-    #  #      # #      ######   #   #      #    # #    # #    # #####   ####
-    #  #      # #  ### #    #   #   #      #    # #####  #    # #           #
-    #  #      # #    # #    #   #   #    # #    # #   #   #  #  #      #    #
-    #  ###### #  ####  #    #   #    ####   ####  #    #   ##   ######  ####
-    #
+#
+#  #      #  ####  #    # #####  ####  #    # #####  #    # ######  ####
+#  #      # #    # #    #   #   #    # #    # #    # #    # #      #
+#  #      # #      ######   #   #      #    # #    # #    # #####   ####
+#  #      # #  ### #    #   #   #      #    # #####  #    # #           #
+#  #      # #    # #    #   #   #    # #    # #   #   #  #  #      #    #
+#  ###### #  ####  #    #   #    ####   ####  #    #   ##   ######  ####
+#
 
-    def nearLC(self, nu_in, nus, flux):
+
+class LightCurves:
+
+    def __init__(self):
+        return("Light Curves")
+
+    def nearest(self, nu_in, nus, flux):
         '''This function returns the light curve of the frequency nearest to
         the one given (nu_in).
         '''
-        i_nu, nu = find_nearest(nus, nu_in)
+        i_nu, nu = misc.find_nearest(nus, nu_in)
         return flux[:, i_nu]
 
-    def bandLC(self, nu_min, nu_max, Nnu, nus, flux):
+    def integ(self, nu_min, nu_max, Nnu, freqs, flux):
         try:
-            len(nus)
+            len(freqs)
         except TypeError:
-            return 'nus must be an array'
+            return 'freqs must be an array'
 
-        numn = max([nu_min, freqs[0]])
-        numx = min([nu_max, freqs[-1]])
+        # numn = max([nu_min, freqs[0]])
+        # numx = min([nu_max, freqs[-1]])
 
         if nu_min < freqs[0]:
             print('nu_min =', nu_min)
@@ -78,12 +84,17 @@ def conv2Jy(self, flux):
         freqs_band = freqs_masked.compressed()
         nu_count = len(freqs_band)
 
-    #
-    #   ####  #####  ######  ####  ##### #####    ##
-    #  #      #    # #      #    #   #   #    #  #  #
-    #   ####  #    # #####  #        #   #    # #    #
-    #       # #####  #      #        #   #####  ######
-    #  #    # #      #      #    #   #   #   #  #    #
-    #   ####  #      ######  ####    #   #    # #    #
-    #
-    def spectrum(self, t_min):
+#
+#   ####  #####  ######  ####  ##### #####    ##
+#  #      #    # #      #    #   #   #    #  #  #
+#   ####  #    # #####  #        #   #    # #    #
+#       # #####  #      #        #   #####  ######
+#  #    # #      #      #    #   #   #   #  #    #
+#   ####  #      ######  ####    #   #    # #    #
+#
+
+
+class spectrum:
+
+    def __init__(self):
+        return("Spectra")

@@ -1,11 +1,11 @@
 import numpy as np
-# import logfuns as lf
 
 
 class logFuncs:
+    "Numerical logarithmic functions"
 
     def __init__():
-        print('log functions')
+        print("Numerical logarithmic functions")
 
     def log1(self, x, eps=1e-6):
         def e(x): return 0.5 * (x - 1.0)**2
@@ -33,10 +33,11 @@ class logFuncs:
                             [lambda x: np.log(x)**5, lambda x: (x - 1.0)**5])
 
 
-class pwl_funcs:
+class PwlInteg:
+    "Power-law integrals"
 
     def __init__():
-        print('Power-law integration functions')
+        print("Power-law Integrals")
 
     def P(self, a, s, eps=1e-6):
         '''
