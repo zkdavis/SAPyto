@@ -1,15 +1,11 @@
 import numpy as np
 import numpy.ma as ma
 import scipy.optimize as op
-import emcee
-import corner
-import matplotlib.pyplot as pl
-from SAPyto.pwlFuncs import PwlInteg as pwl
-from SAPyto.magnetobrem import mbs
-
-# TODO read flux density
-# TODO integrate flux density
-# phFlux = ( integral of fnu / nu ) / hPlanck
+# import emcee
+# import corner
+# import matplotlib.pyplot as pl
+import SAPyto.pwlFuncs as pwlf
+import SAPyto.magnetobrem as mbs
 
 
 def Fph(nu_min, nu_max, freqs, Fnu):
@@ -26,22 +22,21 @@ def Fph(nu_min, nu_max, freqs, Fnu):
     if nu_min < freqs[0] or nu_max > freqs[-1]:
         return print('Error: nu_min and nu_max outside frequencies array')
 
-    fmskd = ma.masked_outside(freqs, nu_min, nu_max)
-    nus = fmskd.compressed()
-    flux = Fnu[~fmskd.mask] / nus
+    nu_mskd = ma.masked_outside(freqs, nu_min, nu_max)
+    nus = nu_mskd.compressed()
+    flux = Fnu[~nu_mskd.mask] / nus
     num_nus = len(nus)
 
     integral = 0.0
-    ss = []
+    pwli = pwlf.PwlInteg()
     for i in range(num_nus - 1):
         if flux[i] > 1e-100 and flux[i + 1] > 1e-100:
             s = np.log(flux[i + 1] / flux[i]) / np.log(nus[i + 1] / nus[i])
-            ss.append(s)
-            integral += flux[i] * np.power(nus[i], 1.0 - s) * pwl.P(nus[i + 1] / nus[i], s)
-    return integral / mbs.hPlanck, np.asarray(ss)
+            integral += flux[i] * np.power(nus[i], 1.0 - s) * pwli.P(nus[i + 1] / nus[i], s)
+    return nus[:-1], flux[:-1], integral / mbs.hPlanck
 
 
-def photon_index(freqs, indices):
-    def f(x, a, b, c): return a * b**2 + c
-    popt, pcov = op.curve_fit(f, freqs, indices)
-    return f(freqs, *popt)
+def photon_index(freqs, fluxes):
+    def f(x, a, b): return a * x + b
+    popt, pcov = op.curve_fit(f, np.log10(freqs), np.log10(fluxes))
+    return np.power(10.0, f(np.log10(freqs), *popt)), popt, pcov

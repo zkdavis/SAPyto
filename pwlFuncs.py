@@ -4,7 +4,7 @@ import numpy as np
 class logFuncs:
     "Numerical logarithmic functions"
 
-    def __init__():
+    def __init__(self):
         print("Numerical logarithmic functions")
 
     def log1(self, x, eps=1e-6):
@@ -36,7 +36,7 @@ class logFuncs:
 class PwlInteg:
     "Power-law integrals"
 
-    def __init__():
+    def __init__(self):
         print("Power-law Integrals")
 
     def P(self, a, s, eps=1e-6):
