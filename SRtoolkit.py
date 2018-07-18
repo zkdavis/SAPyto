@@ -1,4 +1,5 @@
 import numpy as np
+from SAPyto.magnetobrem import cLight
 
 
 def beta_vel(gamma):
@@ -27,7 +28,16 @@ def Doppler(gamma, view_angle):
     return 1.0 / (gamma * (1.0 + beta_vel(gamma) * np.cos(view_angle)))
 
 
-def nu_obs(nu, z):
+def nu_obs(nu, z, gamma, view_angle=0.0):
     '''Compute the observed frequency for a given redshift z.
     '''
-    return nu / (1.0 + z)
+    D = Doppler(gamma, view_angle)
+    return nu * D / (1.0 + z)
+
+
+def t_obs(t, z, gamma, x=0.0, view_angle=0.0):
+    '''From Eq. (2.58) in my thesis.
+    '''
+    mu_obs = np.cos(view_angle)
+    D = Doppler(gamma, view_angle)
+    return (1.0 + z) * (t / D + gamma * x * (beta_vel(gamma) - mu_obs) / cLight)
