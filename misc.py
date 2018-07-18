@@ -64,3 +64,26 @@ def whittW(k, m, z):
         return np.exp(-0.5 * z) * np.power(z, 0.5 + float(m)) * hyperu(0.5 + float(m - k), 1 + 2 * m, z)
     else:
         return np.exp(-0.5 * z) * np.power(z, 0.5 + m) * hyperu(0.5 + m - k, 1.0 + 2.0 * m, z)
+
+#
+#  #####  #       ####  ##### ##### # #    #  ####
+#  #    # #      #    #   #     #   # ##   # #    #
+#  #    # #      #    #   #     #   # # #  # #
+#  #####  #      #    #   #     #   # #  # # #  ###
+#  #      #      #    #   #     #   # #   ## #    #
+#  #      ######  ####    #     #   # #    #  ####
+#
+# def print_or_show(self, plt_name, do_print=False, fmt='pdf'):
+#     '''This function will print the data
+#     '''
+#
+#     if do_print:
+#         fig.savefig(pname + '.' + fmt,
+#                     format=fmt,
+#                     dpi=300  # ,
+#                     # rasterized=True,
+#                     # transparent=True
+#                     )
+#     else:
+#         fig.suptitle(pname)
+#         fig.show()

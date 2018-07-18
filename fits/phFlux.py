@@ -30,8 +30,8 @@ def Fph(nu_min, nu_max, freqs, Fnu):
     integral = 0.0
     pwli = pwlf.PwlInteg()
     for i in range(num_nus - 1):
-        if flux[i] > 1e-100 and flux[i + 1] > 1e-100:
-            s = np.log(flux[i + 1] / flux[i]) / np.log(nus[i + 1] / nus[i])
+        if (flux[i] > 1e-100) & (flux[i + 1] > 1e-100):
+            s = -np.log(flux[i + 1] / flux[i]) / np.log(nus[i + 1] / nus[i])
             integral += flux[i] * np.power(nus[i], 1.0 - s) * pwli.P(nus[i + 1] / nus[i], s)
     return nus[:-1], flux[:-1], integral / mbs.hPlanck
 
