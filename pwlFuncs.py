@@ -5,7 +5,8 @@ class logFuncs:
     "Numerical logarithmic functions"
 
     def __init__(self):
-        print("Numerical logarithmic functions")
+        # print("Numerical logarithmic functions")
+        pass
 
     def log1(self, x, eps=1e-6):
         def e(x): return 0.5 * (x - 1.0)**2
@@ -37,7 +38,8 @@ class PwlInteg:
     "Power-law integrals"
 
     def __init__(self):
-        print("Power-law Integrals")
+        # print("Power-law Integrals")
+        pass
 
     def P(self, a, s, eps=1e-6):
         '''

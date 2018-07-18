@@ -19,3 +19,15 @@ def beta_gamma(gamma):
     gamma * beta = sqrt(gamma^2 - 1)
     '''
     return np.sqrt(gamma**2 - 1.0)
+
+
+def Doppler(gamma, view_angle):
+    '''Doppler factor
+    '''
+    return 1.0 / (gamma * (1.0 + beta_vel(gamma) * np.cos(view_angle)))
+
+
+def nu_obs(nu, z):
+    '''Compute the observed frequency for a given redshift z.
+    '''
+    return nu / (1.0 + z)
