@@ -19,18 +19,16 @@ def flux_dens(Inu, dL, z, D, R):
     '''
     return np.pi * R**2 * D**3 * (1.0 + z) * Inu / dL**2
 
-#
-#  #      #  ####  #    # #####  ####  #    # #####  #    # ######  ####
-#  #      # #    # #    #   #   #    # #    # #    # #    # #      #
-#  #      # #      ######   #   #      #    # #    # #    # #####   ####
-#  #      # #  ### #    #   #   #      #    # #####  #    # #           #
-#  #      # #    # #    #   #   #    # #    # #   #   #  #  #      #    #
-#  ###### #  ####  #    #   #    ####   ####  #    #   ##   ######  ####
-#
-
 
 class LightCurves:
-
+    #
+    #  #      #  ####  #    # #####  ####  #    # #####  #    # ######  ####
+    #  #      # #    # #    #   #   #    # #    # #    # #    # #      #
+    #  #      # #      ######   #   #      #    # #    # #    # #####   ####
+    #  #      # #  ### #    #   #   #      #    # #####  #    # #           #
+    #  #      # #    # #    #   #   #    # #    # #   #   #  #  #      #    #
+    #  ###### #  ####  #    #   #    ####   ####  #    #   ##   ######  ####
+    #
     def __init__(self):
         pass
 
@@ -38,9 +36,9 @@ class LightCurves:
         '''This function returns the light curve of the frequency nearest to
         the frequency given: nu_in.
         '''
-        i_nu, nu = misc.find_nearest(nus, nu_in)
+        nu_pos, nu = misc.find_nearest(nus, nu_in)
         print("Nearest frequency: {0} Hz".format(misc.sci_notation(nu)))
-        return flux[:, i_nu]
+        return flux[:, nu_pos]
 
     def pwl_interp(self, nu_in, numt, nus, flux):
         '''This function returns an interpolated light curve
@@ -63,7 +61,7 @@ class LightCurves:
             print('nu_min =', nu_min, '\nminimum frequency in array =', freqs[0])
             return np.zeros(numt)
         if nu_max > freqs[-1]:
-            print('nu_max =', nu_max, '\nmaximum frequency in array=', freqs[0])
+            print('nu_max =', nu_max, '\nmaximum frequency in array=', freqs[-1])
             return np.zeros(numt)
 
         if nu_max <= nu_min:
@@ -99,17 +97,92 @@ class LightCurves:
                     lc[i] += Fnu[i, j] * pwli.P(nus[j + 1] / nus[j], s)
 
         return lc
-#
-#   ####  #####  ######  ####  ##### #####    ##
-#  #      #    # #      #    #   #   #    #  #  #
-#   ####  #    # #####  #        #   #    # #    #
-#       # #####  #      #        #   #####  ######
-#  #    # #      #      #    #   #   #   #  #    #
-#   ####  #      ######  ####    #   #    # #    #
-#
 
 
 class spectrum:
-
+    #
+    #   ####  #####  ######  ####  ##### #####    ##
+    #  #      #    # #      #    #   #   #    #  #  #
+    #   ####  #    # #####  #        #   #    # #    #
+    #       # #####  #      #        #   #####  ######
+    #  #    # #      #      #    #   #   #   #  #    #
+    #   ####  #      ######  ####    #   #    # #    #
+    #
     def __init__(self):
         pass
+
+    def nearest(self, t_in, times, flux):
+        '''This function returns the spectrum at th nearest time to
+        the given one: t_in.
+        '''
+        t_pos, t = misc.find_nearest(times, t_in)
+        print("Nearest time: {0} s".format(misc.sci_notation(t)))
+        return flux[t_pos, :]
+
+    def pwl_interp(self, t_in, numf, times, flux):
+        '''This function returns a power-law interpolated spectrum at the given time: t_in
+        '''
+        t_pos, t = misc.find_nearest(times, t_in)
+        if t > t_in:
+            t_pos += 1
+        spec = np.zeros(numf)
+        for j in range(numf):
+            if (flux[t_pos, j] > 1e-100) & (flux[t_pos + 1, j] > 1e-100):
+                s = np.log(flux[t_pos + 1, j] / flux[t_pos, j]) / np.log(times[t_pos + 1] / times[t_pos])
+            spec[j] = flux[t_pos, j] * (t_in / times[t_pos])**s
+        return spec
+
+    def integ(self, t_min, t_max, numf, times, flux, ret_tmasked=False):
+        '''This function returns the integrated spectrum during the period [t_min, t_max]
+        '''
+
+        if t_min < times[0]:
+            print('t_min =', t_min, '\nminimum time in array =', times[0])
+            return np.zeros(numf)
+        if t_max > times[-1]:
+            print('t_max =', t_max, '\nmaximum time in array=', times[-1])
+            return np.zeros(numf)
+
+        if t_max <= t_min:
+            spec = self.pwl_interp(t_min, numf, times, flux)
+            return spec
+
+        t_mskd = ma.masked_outside(times, t_min, t_max)
+        tt = t_mskd.compressed()
+        num_times = len(tt)
+        Fnu = flux[~t_mskd.mask, :]
+
+        pwli = pwlf.PwlInteg()
+        spec = np.zeros(numf)
+
+        if t_min < tt[0]:
+            Ftmp = self.pwl_interp(t_min, numf, times, flux)
+            for j in range(numf):
+                if (Ftmp[j] > 1e-100) & (Fnu[0, j] > 1e-100):
+                    s = -np.log(Fnu[0, j] / Ftmp[j]) / np.log(tt[0] / t_min)
+                    spec[j] += Ftmp[j] * t_min * pwli.P(tt[0] / t_min, s)
+
+        if t_max > times[-1]:
+            Ftmp = self.pwl_interp(t_max, numf, times, flux)
+            for j in range(numf):
+                if (Ftmp[j] > 1e-100) & (Fnu[-1, j] > 1e-100):
+                    s = -np.log(Ftmp[j] / Fnu[-1, j]) / np.log(t_max / tt[-1])
+                    spec[j] += Fnu[-1, j] * tt[-1] * pwli.P(t_max / tt[-1], s)
+
+        for j in range(numf):
+            for i in range(num_times - 1):
+                if Fnu[i, j] > 1e-100 and Fnu[i, j + 1] > 1e-100:
+                    s = -np.log(Fnu[i + 1, j] / Fnu[i, j]) / np.log(tt[i + 1] / tt[i])
+                    spec[j] += Fnu[i, j] * tt[i] * pwli.P(tt[i + 1] / tt[i], s)
+
+        if ret_tmasked:
+            return spec, tt
+        else:
+            return spec
+
+    def averaged(self, t_min, t_max, numf, times, flux):
+        '''This function returns the averaged spectrum over the period [t_min, t_max]
+        '''
+        spec, tt = self.integ(t_min, t_max, numf, times, flux, ret_tmasked=True)
+        tott = np.sum(tt[1:] - tt[:-1])
+        return spec / tott

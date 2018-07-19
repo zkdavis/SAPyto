@@ -26,6 +26,7 @@ nuFnu_lc = LC.integ(9e11, 2e12, numt, nu_obs, nu_obs * Fnu)
 nuFnu_lc_mono = LC.integ(1e12, 1e12, numt, nu_obs, nu_obs * Fnu)
 nuFnu_lc_near = LC.nearest(1e12, nu_obs, nu_obs * Fnu)
 nuFnu_lc_pwl = LC.pwl_interp(1e12, numt, nu_obs, nu_obs * Fnu)
+# nuFnu_lc_Jy = LC.pwl_interp(1e12, numt, nu_obs, nu_obs * Fnu)
 
 # In[]: Plotting
 fig, ax = plt.subplots()
