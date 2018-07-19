@@ -1,9 +1,6 @@
 import numpy as np
 import numpy.ma as ma
 import scipy.optimize as op
-# import emcee
-# import corner
-# import matplotlib.pyplot as pl
 import SAPyto.pwlFuncs as pwlf
 import SAPyto.magnetobrem as mbs
 
@@ -32,7 +29,7 @@ def Fph(nu_min, nu_max, freqs, Fnu):
     for i in range(num_nus - 1):
         if (flux[i] > 1e-100) & (flux[i + 1] > 1e-100):
             s = -np.log(flux[i + 1] / flux[i]) / np.log(nus[i + 1] / nus[i])
-            integral += flux[i] * np.power(nus[i], 1.0 - s) * pwli.P(nus[i + 1] / nus[i], s)
+            integral += flux[i] * nus[i] * pwli.P(nus[i + 1] / nus[i], s)
     return nus[:-1], flux[:-1], integral / mbs.hPlanck
 
 

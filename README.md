@@ -2,38 +2,26 @@
 
 ## Purpose 
 
+This package intends to construct light curves and spectra out of simulations. Also calculate the photon flux, photon spectral index and fit spectral energy distributions (SEDs).
 
 ## Requirements
 - numpy
+- scipy
 
-## How to use it
+## Description of the modules
 
+### `magnetobrem`
 
-## Regarding `SEDfit.py`
-
-This is an old project that I wrote to fit artificially produced SEDs out
-of simulations or fits from observational data.
-
-### What does this thing do?
-  - Fits data form InternalShocks
-    - Separates the radiation processes (Synchrotron and IC)
-    - Fits the separately
-  - Integrates the fitting
+In this module the following physical constants are defined: `cLight`, `eCharge`, `hPlanck`, `me`, `mp`, `sigmaT`, `nuconstn = e / (2 pi m_e c)`, `halfpi = pi / 2`, `twopi = 2 pi`.
 
 
-### Describing each function
 
-`Fitting(filename, magnetization, dependence, pol_order )`
- - filename:
- - magnetization:
- - dependence:
- - pol_order:
+### `pwlFuncs`
 
-`ReadFitting(filename)`
+### `spectra`
 
-`WritingRatios(filename, ratios, dep)`
- - filename: output file for the ratios
- - dep: values of the dependence
- - ratios: 2 x len(dep) array :: ititialy array([],[])
+### `SRtoolkit`
 
-## To do
+### `fits.phFlux`
+
+### `fits.SEDfit`
