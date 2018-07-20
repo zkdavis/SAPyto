@@ -14,16 +14,30 @@ def fortran_double(number):
     '''Function that returns a floating point (as a string) in the FORTRAN
     notation
     '''
-    string = "{:.20e}".format(number)
+    string = "{:.10e}".format(number)
     parts = string.split('e')
     ss = parts[0].split('.')
+    ee = parts[-1]
     s = ss[1]
+
     while s.endswith('0'):
         s = s[:-1]
     if (len(s) > 0):
-        ss = ss[0] + s
+        ss = ss[0] + '.' + s
     else:
         ss = ss[0]
+
+    if ee.startswith('-'):
+        e = ee.split('-')[-1]
+        while e.startswith('0'):
+            e = e[1:]
+        ee = '-' + e
+    else:
+        while ee.startswith('+') or ee.startswith('0'):
+            ee = ee[1:]
+    if (len(ee) == 0):
+        ee = '0'
+
     return "{0}d{1}".format(ss, parts[1])
 
 
