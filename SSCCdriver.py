@@ -1,7 +1,15 @@
 import os
 # import numpy as np
-# import SAPyto as sap
+import SAPyto.spectra as spec
 import extractor.fromHDF5 as extr
+
+
+#  #####    ##   #####    ##   #    #  ####
+#  #    #  #  #  #    #  #  #  ##  ## #
+#  #    # #    # #    # #    # # ## #  ####
+#  #####  ###### #####  ###### #    #      #
+#  #      #    # #   #  #    # #    # #    #
+#  #      #    # #    # #    # #    #  ####
 
 
 class SSCC_params(object):
@@ -53,6 +61,15 @@ class SSCC_params(object):
             print(self.numdf, file=f)
             print(self.file_tail, file=f)
 
+    def output_file(self):
+
+        #  #####  #    # #    #
+        #  #    # #    # ##   #
+        #  #    # #    # # #  #
+        #  #####  #    # #  # #
+        #  #   #  #    # #   ##
+        #  #    #  ####  #    #
+
 
 class runSSCC(object):
     def __init__(self, **kwargs):
@@ -95,7 +112,24 @@ class runSSCC(object):
         os.system("rm -r NewSSCC")
 
 
+#   ####  #    # ##### #####  #    # #####
+#  #    # #    #   #   #    # #    #   #
+#  #    # #    #   #   #    # #    #   #
+#  #    # #    #   #   #####  #    #   #
+#  #    # #    #   #   #      #    #   #
+#   ####   ####    #   #       ####    #
+
+
 class outSSCC(object):
-    # NOTE manipulate data
-    def __init__(self):
-        pass
+
+    def __init__(self, **kwargs):
+        self.par = SSCC_params(**kwargs)
+        self.wdir = './'
+        self.outfile = 'out.h5'
+        self.__dict__.update(kwargs)
+
+    def light_curves(self, dsets, **kwargs):
+        if type(dsets) is list:
+            for dset in dsets:
+                Inu = extr.hdf5Extract2D(self.outfile, dset)
+                Fnu = spec.flux_dens(Inu, )

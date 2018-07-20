@@ -49,8 +49,7 @@ class mbs:
             return np.sqrt(np.pi * Xc * 0.5) * np.exp(-Xc)
         else:
             return np.asarray(
-                [x * integrate.quad(lambda y: scisp.kv(5.0 / 3.0, y), x, np.inf)[0]
-                 for x in Xc])
+                [x * integrate.quad(lambda y: scisp.kv(5.0 / 3.0, y), x, np.inf)[0] for x in Xc])
 
     def Rsync(self, Xc, asym_low=False, asym_high=False):
         ''' R(x) in Crusius & Schlickeiser (1986)
@@ -70,11 +69,6 @@ class mbs:
 
     def FDB08fit(self, Xc):
         '''Fit by Finke, Dermer & Boettcher (2008)'''
-
-        # nuc = self.nu_c_iso(B, g)
-        # x = nu / nuc
-        # low = {'B': B, 'g': g, 'asym_low': True}
-        # high = {'B': B, 'g': g, 'asym_high': True}
 
         def A(x):
             return np.power(10.0,
@@ -133,7 +127,6 @@ class mbs:
                           - 0.028650695862678 * np.power(np.log(x), 5))
 
         def theFit(x):
-            # x = xg3 / g**3
             c1 = 3.218090050062573e-4
             c2 = 0.650532122717873
             c3 = 15.57990468980456
@@ -146,15 +139,11 @@ class mbs:
                                  lambda x: A(x),
                                  lambda x: B(x),
                                  lambda x: self.Rsync(x, asym_high=True)])
-        # gamma = {'g': g}
         return np.piecewise(Xc,
                             [Xc * g**3 < 0.53, Xc * g**3 >= 0.53],
                             [0.0, lambda x: theFit(x)])
 
     def RMA(self, Xc, g):
-        # x = nu / self.nu_c_iso(B, g)
-        # xg3 = x * g**3
-        # arg = {'g': g}
         return np.piecewise(Xc,
                             [Xc * g**3 <= 0.53, Xc * g**3 > 0.53],
                             [0.0, lambda x: x * self.SL07(x)])
