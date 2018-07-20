@@ -16,10 +16,9 @@ def fortran_double(number):
     '''
     string = "{:.10e}".format(number)
     parts = string.split('e')
-    ss = parts[0].split('.')
-    ee = parts[-1]
-    s = ss[1]
 
+    ss = parts[0].split('.')
+    s = ss[1]
     while s.endswith('0'):
         s = s[:-1]
     if (len(s) > 0):
@@ -27,6 +26,7 @@ def fortran_double(number):
     else:
         ss = ss[0]
 
+    ee = parts[-1]
     if ee.startswith('-'):
         e = ee.split('-')[-1]
         while e.startswith('0'):
@@ -38,7 +38,7 @@ def fortran_double(number):
     if (len(ee) == 0):
         ee = '0'
 
-    return "{0}d{1}".format(ss, parts[1])
+    return "{0}d{1}".format(ss, ee)
 
 
 def sci_notation(n, prec=3, fortran=False):

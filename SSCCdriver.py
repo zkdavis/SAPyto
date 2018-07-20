@@ -1,6 +1,7 @@
 import os
 # import numpy as np
 import SAPyto.spectra as spec
+from SAPyto.misc import fortran_double
 import extractor.fromHDF5 as extr
 
 
@@ -16,8 +17,8 @@ class SSCC_params(object):
 
     def params(self):
         self.R = 1e18
-        self.dLum = 1e26
-        self.z = 0.03
+        self.dLum = 4.0793e26     # Luminosity distance of Mrk 421
+        self.z = 0.03             # Redshift of Mrk 421
         self.gamma_bulk = 10.0
         self.theta_obs = 5.0
         self.B = 1.0
@@ -31,7 +32,7 @@ class SSCC_params(object):
         self.wCool = 'T'
         self.wMBSabs = 'T'
         self.wSSCem = 'T'
-        self.file_tail = 'DriverTest'
+        self.file_label = 'DriverTest'
         self.ISdir = './'
         self.params_file = 'input.par'
         self.HYB = True
@@ -46,29 +47,52 @@ class SSCC_params(object):
 
     def write_params(self):
         with open(self.params_file, 'w') as f:
-            print(self.R, file=f)
-            print(self.dLum, file=f)
-            print(self.z, file=f)
-            print(self.gamma_bulk, file=f)
-            print(self.theta_obs, file=f)
-            print(self.B, file=f)
-            print(self.theta_e, file=f)
-            print(self.dtacc, file=f)
-            print(self.g1, file=f)
-            print(self.g2, file=f)
+            print(fortran_double(self.R), file=f)
+            print(fortran_double(self.dLum), file=f)
+            print(fortran_double(self.z), file=f)
+            print(fortran_double(self.gamma_bulk), file=f)
+            print(fortran_double(self.theta_obs), file=f)
+            print(fortran_double(self.B), file=f)
+            print(fortran_double(self.theta_e), file=f)
+            print(fortran_double(self.dtacc), file=f)
+            print(fortran_double(self.g1), file=f)
+            print(fortran_double(self.g2), file=f)
             print(self.numbins, file=f)
             print(self.numdt, file=f)
             print(self.numdf, file=f)
-            print(self.file_tail, file=f)
+            print(self.file_label, file=f)
 
     def output_file(self):
+        outf = ''
+        if self.HYB:
+            outf += 'H'
+        else:
+            outf += 'P'
+        if self.MBS:
+            outf += 'M'
+        else:
+            outf += 'S'
+        if self.wCool:
+            outf += 'V'
+        else:
+            outf += 'C'
+        if self.wMBSabs:
+            outf += 'O'
+        else:
+            outf += 'T'
+        if self.wSSCem:
+            outf += 'wSSC'
+        else:
+            outf += 'oSSC'
+        return outf + '-' + self.file_label + '.h5'
 
-        #  #####  #    # #    #
-        #  #    # #    # ##   #
-        #  #    # #    # # #  #
-        #  #####  #    # #  # #
-        #  #   #  #    # #   ##
-        #  #    #  ####  #    #
+
+#  #####  #    # #    #
+#  #    # #    # ##   #
+#  #    # #    # # #  #
+#  #####  #    # #  # #
+#  #   #  #    # #   ##
+#  #    #  ####  #    #
 
 
 class runSSCC(object):
