@@ -10,7 +10,24 @@ def exp10(decimal):
     return int(parts[1])
 
 
-def sci_notation(n, prec=3):
+def fortran_double(number):
+    '''Function that returns a floating point (as a string) in the FORTRAN
+    notation
+    '''
+    string = "{:.20e}".format(number)
+    parts = string.split('e')
+    ss = parts[0].split('.')
+    s = ss[1]
+    while s.endswith('0'):
+        s = s[:-1]
+    if (len(s) > 0):
+        ss = ss[0] + s
+    else:
+        ss = ss[0]
+    return "{0}d{1}".format(ss, parts[1])
+
+
+def sci_notation(n, prec=3, fortran=False):
     """Represent n in scientific notation, with the specified precision.
 
     >>> sci_notation(1234 * 10**1000)
@@ -22,7 +39,10 @@ def sci_notation(n, prec=3):
     if (n < 1):
         exponent -= 1
     mantissa = n / np.power(10, exponent)
-    return '{0:.{1}f}e{2:+d}'.format(mantissa, prec, exponent)
+    if fortran:
+        return '{0:.{1}f}d{2:+d}'.format(mantissa, prec, exponent)
+    else:
+        return '{0:.{1}f}e{2:+d}'.format(mantissa, prec, exponent)
 
 
 def find_nearest(arr, val):
