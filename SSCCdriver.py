@@ -1,7 +1,7 @@
 import os
-# import numpy as np
 import SAPyto.spectra as spec
 from SAPyto.misc import fortran_double
+import SAPyto.SRtoolkit as SR
 import extractor.fromHDF5 as extr
 
 
@@ -29,9 +29,9 @@ class SSCC_params(object):
         self.numbins = 128
         self.numdt = 300
         self.numdf = 256
-        self.wCool = 'T'
-        self.wMBSabs = 'T'
-        self.wSSCem = 'T'
+        self.wCool = True
+        self.wMBSabs = True
+        self.wSSCem = True
         self.file_label = 'DriverTest'
         self.ISdir = './'
         self.params_file = 'input.par'
@@ -64,27 +64,39 @@ class SSCC_params(object):
 
     def output_file(self):
         outf = ''
+        argv = ''
         if self.HYB:
             outf += 'H'
         else:
             outf += 'P'
+
         if self.MBS:
             outf += 'M'
         else:
             outf += 'S'
+
         if self.wCool:
             outf += 'V'
+            argv += ' T'
         else:
             outf += 'C'
+            argv += ' F'
+
         if self.wMBSabs:
             outf += 'O'
+            argv += ' T'
         else:
             outf += 'T'
+            argv += ' F'
+
         if self.wSSCem:
             outf += 'wSSC'
+            argv += ' T'
         else:
             outf += 'oSSC'
-        return outf + '-' + self.file_label + '.h5'
+            argv += ' F'
+
+        return outf + '-' + self.file_label + '.h5', argv
 
 
 #  #####  #    # #    #
@@ -99,6 +111,8 @@ class runSSCC(object):
     def __init__(self, **kwargs):
         self.par = SSCC_params(**kwargs)
         self.par.write_params()
+        self.outfile, self.argv = self.par.output_file()
+        self.cwd = os.getcwd()
 
     def compile(self, **kwargs):
         make = 'make NewSSCC -j4'
@@ -119,41 +133,90 @@ class runSSCC(object):
         if self.par.MBS:
             make += ' MBS=1'
 
-        cwd = os.getcwd()
         os.chdir(self.par.ISdir)
-        print("Running Makefile with:\n   ", make)
+        print("--> Running Makefile:\n   ", make, "\n")
         os.system(make)
-        os.chdir(cwd)
+        os.chdir(self.cwd)
         print("\n--> Compilation successful\n")
 
-    def run_NewSSCC(self, **kwargs):
-        run_cmd = '{0}NewSSCC {1} {2} {3} {4}'.format(self.par.ISdir, self.par.params_file, self.par.wCool, self.par.wMBSabs, self.par.wSSCem)
-        print("--> Running:\n  ", run_cmd)
+    def runNewSSCC(self, **kwargs):
+        run_cmd = '{0}/NewSSCC {1}{2}'.format(self.par.ISdir, self.par.params_file, self.argv)
+        print("\n--> Running:\n  ", run_cmd, "\n")
         os.system(run_cmd)
-        print("--> NewSSCC ran successfully")
+        print("\n--> NewSSCC ran successfully")
 
     def cleanup(self, **kwargs):
-        os.system("rm -r NewSSCC")
+        os.chdir(self.par.ISdir)
+        os.system("make clean")
+        os.chdir(self.cwd)
 
 
-#   ####  #    # ##### #####  #    # #####
-#  #    # #    #   #   #    # #    #   #
-#  #    # #    #   #   #    # #    #   #
-#  #    # #    #   #   #####  #    #   #
-#  #    # #    #   #   #      #    #   #
-#   ####   ####    #   #       ####    #
+# #   ####  #    # ##### #####  #    # #####
+# #  #    # #    #   #   #    # #    #   #
+# #  #    # #    #   #   #    # #    #   #
+# #  #    # #    #   #   #####  #    #   #
+# #  #    # #    #   #   #      #    #   #
+# #   ####   ####    #   #       ####    #
 
 
-class outSSCC(object):
+def build_LCs(nu_min, nu_max, dset='Inut', only_load=True, inJanskys=False, **kwargs):
+    run = runSSCC(**kwargs)
+    if not only_load:
+        run.cleanup()
+        run.compile()
+        run.runNewSSCC()
+    D = SR.Doppler(run.par.gamma_bulk, run.par.theta_obs)
+    nu = extr.hdf5Extract1D(run.outfile, 'frequency')
+    t = extr.hdf5Extract1D(run.outfile, 'time')
+    nu_obs = SR.nu_obs(nu, run.par.z, run.par.gamma_bulk, run.par.theta_obs)
+    t_obs = SR.t_obs(t, run.par.z, run.par.gamma_bulk, view_angle=run.par.theta_obs)
+    Inu = extr.hdf5Extract2D(run.outfile, dset)
+    Fnu = spec.flux_dens(Inu, run.par.dLum, run.par.z, D, run.par.R)
+    LC = spec.LightCurves()
 
-    def __init__(self, **kwargs):
-        self.par = SSCC_params(**kwargs)
-        self.wdir = './'
-        self.outfile = 'out.h5'
-        self.__dict__.update(kwargs)
+    if inJanskys:
+        return t_obs, spec.conv2Jy(LC.integ(nu_min, nu_max, run.par.numdt, nu_obs, Fnu))
+    else:
+        return t_obs, LC.integ(nu_min, nu_max, run.par.numdt, nu_obs, Fnu)
 
-    def light_curves(self, dsets, **kwargs):
-        if type(dsets) is list:
-            for dset in dsets:
-                Inu = extr.hdf5Extract2D(self.outfile, dset)
-                Fnu = spec.flux_dens(Inu, )
+
+def build_avSpec(t_min, t_max, dset='Inut', only_load=True, inJanskys=False, **kwargs):
+    run = runSSCC(**kwargs)
+    if not only_load:
+        run.cleanup()
+        run.compile()
+        run.runNewSSCC()
+    D = SR.Doppler(run.par.gamma_bulk, run.par.theta_obs)
+    nu = extr.hdf5Extract1D(run.outfile, 'frequency')
+    t = extr.hdf5Extract1D(run.outfile, 'time')
+    nu_obs = SR.nu_obs(nu, run.par.z, run.par.gamma_bulk, run.par.theta_obs)
+    t_obs = SR.t_obs(t, run.par.z, run.par.gamma_bulk, view_angle=run.par.theta_obs)
+    Inu = extr.hdf5Extract2D(run.outfile, dset)
+    Fnu = spec.flux_dens(Inu, run.par.dLum, run.par.z, D, run.par.R)
+    sp = spec.spectrum()
+
+    if inJanskys:
+        return nu_obs, spec.conv2Jy(sp.averaged(t_min, t_max, run.par.numdf, t_obs, Fnu))
+    else:
+        return nu_obs, sp.averaged(t_min, t_max, run.par.numdf, t_obs, Fnu)
+
+
+def build_SEDs(dset='Inut', only_load=True, inJanskys=False, **kwargs):
+    run = runSSCC(**kwargs)
+    if not only_load:
+        run.cleanup()
+        run.compile()
+        run.runNewSSCC()
+    D = SR.Doppler(run.par.gamma_bulk, run.par.theta_obs)
+    nu = extr.hdf5Extract1D(run.outfile, 'frequency')
+    t = extr.hdf5Extract1D(run.outfile, 'time')
+    nu_obs = SR.nu_obs(nu, run.par.z, run.par.gamma_bulk, run.par.theta_obs)
+    t_obs = SR.t_obs(t, run.par.z, run.par.gamma_bulk, view_angle=run.par.theta_obs)
+    Inu = extr.hdf5Extract2D(run.outfile, dset)
+    Fnu = spec.flux_dens(Inu, run.par.dLum, run.par.z, D, run.par.R)
+    sp = spec.spectrum()
+
+    if inJanskys:
+        return nu_obs, spec.conv2Jy(sp.averaged(t_obs[0], t_obs[-1], run.par.numdf, t_obs, Fnu))
+    else:
+        return nu_obs, sp.averaged(t_obs[0], t_obs[-1], run.par.numdf, t_obs, Fnu)
