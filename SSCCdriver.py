@@ -16,30 +16,34 @@ import extractor.fromHDF5 as extr
 class SSCC_params(object):
 
     def params(self):
-        self.R = 1e18
-        self.dLum = 4.0793e26     # Luminosity distance of Mrk 421
-        self.z = 0.03             # Redshift of Mrk 421
-        self.gamma_bulk = 10.0
-        self.theta_obs = 5.0
-        self.B = 1.0
-        self.theta_e = 10.0
-        self.dtacc = 1e2
-        self.g1 = 1e2
-        self.g2 = 1e4
-        self.numbins = 128
-        self.numdt = 300
-        self.numdf = 256
-        self.wCool = True
-        self.wMBSabs = True
-        self.wSSCem = True
-        self.file_label = 'DriverTest'
-        self.ISdir = './'
-        self.params_file = 'input.par'
-        self.HYB = True
-        self.MBS = True
-        self.arc = 'i7'
-        self.OMP = False
-        self.DBG = False
+        # -----  PARAMETERS  -----
+        self.R = 1e18                   # radius of emitting region (assuming spherical)
+        self.dLum = 4.0793e26           # luminosity distance (default Mrk 421)
+        self.z = 0.03                   # redshift (default Mrk 421)
+        self.gamma_bulk = 10.0          # emitting region bulk Lorentz factor
+        self.theta_obs = 5.0            # observer viewing angle
+        self.B = 1.0                    # magnetic field magnitude
+        self.theta_e = 10.0             # electrons temperature
+        self.dtacc = 1e2                # injection period
+        self.g1 = 1e2                   # power-law min Lorentz factor
+        self.g2 = 1e4                   # power-law max Lorentz factor
+        self.numbins = 128              # number of EED bins
+        self.numdt = 300                # number of time steps
+        self.numdf = 256                # number of frequencies
+        # -----  ARGS OF THE EXECUTABLE  -----
+        self.wCool = True               # variable cooling
+        self.wMBSabs = True             # compute MBS self-absorption
+        self.wSSCem = True              # compute SSC emissivity
+        # -----  INPUT AND OUTPUT  -----
+        self.file_label = 'DriverTest'  # a label to identify each output
+        self.ISdir = './'               # address to InternalShocks, must end with '/'
+        self.params_file = 'input.par'  # name of the parameters file
+        # -----  COMPILER PARAMS  -----
+        self.HYB = True                 # compile with HYB=1 flag
+        self.MBS = True                 # compile with MBS=1 flag
+        self.arc = 'i7'                 # compile with specific arch flag
+        self.OMP = False                # compile with OpenMP
+        self.DBG = False                # compile for debugging
 
     def __init__(self, **kwargs):
         self.params()
@@ -114,7 +118,7 @@ class runSSCC(object):
         self.outfile, self.argv = self.par.output_file()
         self.cwd = os.getcwd()
 
-    def compile(self, **kwargs):
+    def compile(self):
         make = 'make NewSSCC -j4'
         if self.par.arc in ['i7', 'corei7', 'I7', 'COREI7']:
             make += ' COREI7=1'
@@ -139,24 +143,24 @@ class runSSCC(object):
         os.chdir(self.cwd)
         print("\n--> Compilation successful\n")
 
-    def runNewSSCC(self, **kwargs):
+    def runNewSSCC(self):
         run_cmd = '{0}/NewSSCC {1}{2}'.format(self.par.ISdir, self.par.params_file, self.argv)
         print("\n--> Running:\n  ", run_cmd, "\n")
         os.system(run_cmd)
         print("\n--> NewSSCC ran successfully")
 
-    def cleanup(self, **kwargs):
+    def cleanup(self):
         os.chdir(self.par.ISdir)
         os.system("make clean")
         os.chdir(self.cwd)
 
 
-# #   ####  #    # ##### #####  #    # #####
-# #  #    # #    #   #   #    # #    #   #
-# #  #    # #    #   #   #    # #    #   #
-# #  #    # #    #   #   #####  #    #   #
-# #  #    # #    #   #   #      #    #   #
-# #   ####   ####    #   #       ####    #
+#   ####  #    # ##### #####  #    # #####
+#  #    # #    #   #   #    # #    #   #
+#  #    # #    #   #   #    # #    #   #
+#  #    # #    #   #   #####  #    #   #
+#  #    # #    #   #   #      #    #   #
+#   ####   ####    #   #       ####    #
 
 
 def build_LCs(nu_min, nu_max, dset='Inut', only_load=True, inJanskys=False, **kwargs):
