@@ -3,11 +3,11 @@ from scipy.special import hyp1f1, hyperu
 
 
 def exp10(decimal):
-    '''Function that gets the exponent of a double number. It only splits the
-    string and returns the exponent as an integer
+    '''Function that gets the exponent of a double number.
     '''
-    parts = ("%e" % decimal).split('e')
-    return int(parts[1])
+    string = "{:.10e}".format(decimal)
+    parts = string.split('e')
+    return int(parts[-1])
 
 
 def fortran_double(number):
@@ -37,13 +37,11 @@ def fortran_double(number):
             ee = ee[1:]
     if (len(ee) == 0):
         ee = '0'
-
     return "{0}d{1}".format(ss, ee)
 
 
 def sci_notation(n, prec=3, fortran=False):
     """Represent n in scientific notation, with the specified precision.
-
     >>> sci_notation(1234 * 10**1000)
     '1.234e+1003'
     >>> sci_notation(10**1000 // 2, prec=1)
@@ -54,9 +52,9 @@ def sci_notation(n, prec=3, fortran=False):
         exponent -= 1
     mantissa = n / np.power(10, exponent)
     if fortran:
-        return '{0:.{1}f}d{2:+d}'.format(mantissa, prec, exponent)
+        return "{0:.{1}f}d{2:+d}".format(mantissa, prec, exponent)
     else:
-        return '{0:.{1}f}e{2:+d}'.format(mantissa, prec, exponent)
+        return "{0:.{1}f}e{2:+d}".format(mantissa, prec, exponent)
 
 
 def find_nearest(arr, val):
@@ -78,7 +76,7 @@ def find_nearest(arr, val):
 
 def whittM(k, m, z):
     """Evaluates the Whitaker function M(k, m, z) as defined in Abramowitz &
-    Stegun, section 13.1.
+    Stegun, Section 13.1.
     """
     if k is int or m is int:
         return np.exp(-0.5 * z) * np.power(z, 0.5 + float(m)) * hyp1f1(0.5 + float(m - k), 1 + 2 * m, z)
@@ -90,7 +88,7 @@ def whittM(k, m, z):
 
 def whittW(k, m, z):
     """Evaluates the Whitaker function W(k, m, z) as defined in Abramowitz &
-    Stegun, section 13.1.
+    Stegun, Section 13.1.
     """
     if k is int or m is int:
         return np.exp(-0.5 * z) * np.power(z, 0.5 + float(m)) * hyperu(0.5 + float(m - k), 1 + 2 * m, z)
@@ -98,26 +96,3 @@ def whittW(k, m, z):
         return np.exp(-0.5 * z) * np.power(z, 0.5 + float(m)) * hyperu(0.5 + float(m - k), 1 + 2 * m, z)
     else:
         return np.exp(-0.5 * z) * np.power(z, 0.5 + m) * hyperu(0.5 + m - k, 1.0 + 2.0 * m, z)
-
-#
-#  #####  #       ####  ##### ##### # #    #  ####
-#  #    # #      #    #   #     #   # ##   # #    #
-#  #    # #      #    #   #     #   # # #  # #
-#  #####  #      #    #   #     #   # #  # # #  ###
-#  #      #      #    #   #     #   # #   ## #    #
-#  #      ######  ####    #     #   # #    #  ####
-#
-# def print_or_show(self, plt_name, do_print=False, fmt='pdf'):
-#     '''This function will print the data
-#     '''
-#
-#     if do_print:
-#         fig.savefig(pname + '.' + fmt,
-#                     format=fmt,
-#                     dpi=300  # ,
-#                     # rasterized=True,
-#                     # transparent=True
-#                     )
-#     else:
-#         fig.suptitle(pname)
-#         fig.show()

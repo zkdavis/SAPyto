@@ -3,6 +3,7 @@ import numpy as np
 import scipy.integrate as integrate
 from astropy import constants as const
 from SAPyto import misc
+import SAPyto.SRtoolkit as SR
 
 cLight = const.c.cgs.value
 eCharge = const.e.gauss.value
@@ -17,12 +18,16 @@ twopi = 2.0 * np.pi
 
 class mbs:
 
-    def __init__(self, Zq=1.0, mq=me):
-        self.Zq = Zq
-        self.mq = mq
+    def __init__(self, **kwargs):
+        self.Zq = 1.0
+        self.mq = me
+        self.__dict__.update(kwargs)
 
     def nu_g(self, B):
-        '''Cyclotron frequency'''
+        '''Cyclotron frequency
+              nu_g = Z e B / (2 pi m_q c)
+        Dafault values: Z = 1.0, m_q = m_e
+        '''
         return eCharge * self.Zq * B / (twopi * self.mq * cLight)
 
     def nu_B(self, B, g):
@@ -40,6 +45,14 @@ class mbs:
     def chi(self, nu, B):
         '''Harmonic frequency'''
         return nu / self.nu_g(B)
+
+    def Psyn_iso(gamma, B):
+        '''Total synchrotron radiated power for an isotropic distribution of
+        velocities. Formula given in Rybicki & Lightman (1985), eq. (6.7b):
+        
+            P = (4 / 3) sigma_T c beta^2 gamma^2 (B^2 / 8 pi)
+        '''
+        return 4.0 * sigmaT * cLight * SR.speed2(gamma) * gamma**2 * B**2 / (24.0 * np.pi)
 
     def Fsync(self, Xc, asym_low=False, asym_high=False):
         '''Synchrotron function'''

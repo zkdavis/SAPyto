@@ -2,30 +2,50 @@ import numpy as np
 from SAPyto.magnetobrem import cLight
 
 
-def beta_vel(gamma):
+def speed(gamma):
     '''v / c = sqrt(1 - 1 / gamma^2)
     '''
     return np.sqrt(1.0 - np.power(gamma, -2))
 
 
-def gamma_lorentz(beta):
+def speed2(gamma):
+    '''(v / c)^2 = 1 - 1 / gamma^2
+    '''
+    return 1.0 - np.power(gamma, -2)
+
+
+def LorentzFactor(beta):
     '''Calculating the Lorentz factor:
     gamma = 1 / sqrt(1 - beta^2)
     '''
     return 1.0 / np.sqrt(1.0 - beta**2)
 
 
-def beta_gamma(gamma):
+def LorentzFactor2(beta):
+    '''Calculating the Lorentz factor:
+    gamma^2 = 1 / 1 - beta^2
+    '''
+    return 1.0 / (1.0 - beta**2)
+
+
+def momentum(gamma):
     '''Calculating the momentum:
     gamma * beta = sqrt(gamma^2 - 1)
     '''
     return np.sqrt(gamma**2 - 1.0)
 
 
+def momentum2(gamma):
+    '''Calculating the momentum:
+    (gamma * beta)^2 = gamma^2 - 1
+    '''
+    return gamma**2 - 1.0
+
+
 def Doppler(gamma, view_angle):
     '''Doppler factor
     '''
-    return 1.0 / (gamma * (1.0 + beta_vel(gamma) * np.cos(view_angle)))
+    return 1.0 / (gamma * (1.0 + speed(gamma) * np.cos(view_angle)))
 
 
 def nu_obs(nu, z, gamma, view_angle=0.0):
@@ -40,4 +60,4 @@ def t_obs(t, z, gamma, x=0.0, view_angle=0.0):
     '''
     mu_obs = np.cos(view_angle)
     D = Doppler(gamma, view_angle)
-    return (1.0 + z) * (t / D + gamma * x * (beta_vel(gamma) - mu_obs) / cLight)
+    return (1.0 + z) * (t / D + gamma * x * (speed(gamma) - mu_obs) / cLight)
