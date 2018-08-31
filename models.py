@@ -10,14 +10,15 @@ class SPN98(object):
 
     def __init__(self, **kwargs):
         # self.td = 1.0
+        # self.nu15 = 1.0
+        self.eps_e = 0.6
         self.eps_B = 0.5
         self.g2 = 1.0
         self.n1 = 1.0
         self.E52 = 1.0
         self.D28 = 1.0
-        # self.nu15 = 1.0
-        self.eps_e = 0.6
         self.pind = 2.5
+        self.adiab = True
         self.__dict__.update(kwargs)
 
     #
@@ -28,8 +29,8 @@ class SPN98(object):
     #  #      #   #  #      #   #  #    #
     #  #      #    # ######  ### #  ####
     #
-    def nuc(self, td, adiab=True):
-        if adiab:
+    def nuc(self, td):
+        if self.adiab:
             # NOTE: Following Eq. (11)
             return 2.7e12 * (np.power(self.eps_B, -1.5)
                              / (np.sqrt(self.E52 * td) * self.n1))
@@ -40,8 +41,8 @@ class SPN98(object):
                              * np.power(td, -2.0 / 7.0)
                              * np.power(self.n1, -13.0 / 14.0))
 
-    def num(self, td, adiab=True):
-        if adiab:
+    def num(self, td):
+        if self.adiab:
             # NOTE: Following Eq. (11)
             return 5.7e14 * (np.sqrt(self.eps_B)
                              * self.eps_e**2
@@ -55,8 +56,8 @@ class SPN98(object):
                              * np.power(self.n1, -1.0 / 14.0)
                              * np.power(td, -12.0 / 7.0))
 
-    def nu0(self, adiab=True):
-        if adiab:
+    def nu0(self):
+        if self.adiab:
             nu0 = 1.8e11 * (np.power(self.eps_B, -2.5)
                             * np.power(self.n1, -1.5)
                             / (self.eps_e * self.E52))
@@ -75,8 +76,8 @@ class SPN98(object):
     #    #   # #    # #      #    #
     #    #   # #    # ######  ####
     #
-    def tc(self, nu15, adiab=True):
-        if adiab:
+    def tc(self, nu15):
+        if self.adiab:
             return 7.3e-6 / (self.eps_B**3
                              * self.E52
                              * self.n1**2
@@ -88,8 +89,8 @@ class SPN98(object):
                              * np.power(nu15, -0.5 * 7.0)
                              / self.E52**2)
 
-    def tm(self, nu15, adiab=True):
-        if adiab:
+    def tm(self, nu15):
+        if self.adiab:
             return 0.69 * (np.power(self.eps_B, 1.0 / 3.0)
                            * np.power(self.eps_e, 4.0 / 3.0)
                            * np.power(self.E52, 1.0 / 3.0)
@@ -102,8 +103,8 @@ class SPN98(object):
                            * np.power(self.n1, -1.0 / 24.0)
                            * np.power(nu15, -7.0 / 12.0))
 
-    def t0(self, adiab=True):
-        if adiab:
+    def t0(self):
+        if self.adiab:
             t0 = 210.0 * (self.eps_B**2
                           * self.eps_e**2
                           * self.E52
@@ -122,9 +123,9 @@ class SPN98(object):
     #  #      #      #    #  #  #  #      #    #
     #  #      ######  ####  #    # ######  ####
     #
-    def Fmax(self, td, adiab=True):
+    def Fmax(self, td):
         '''Flux in mili-janskys'''
-        if adiab:
+        if self.adiab:
             # NOTE: Following Eq. (11)
             return 1.1e5 * (np.sqrt(self.eps_B)
                             * self.E52
@@ -155,7 +156,7 @@ class SPN98(object):
                                 np.power(nu / nuc, 0.5 * (1.0 - self.pind)) * Fnu_max,
                                 np.power(num / nuc, 0.5 * (1.0 - self.pind)) * np.power(nu / nuc, -0.5 * self.pind) * Fnu_max])
 
-    def fluxSPN98(self, nu, t, adiab=True):
+    def fluxSPN98(self, nu, t):
         # import magnetobrem as mbs
         # MBS = mbs.mbs()
         #
@@ -175,14 +176,14 @@ class SPN98(object):
         td = t / 8.64e4
         flux = np.ndarray((Nt, Nnu))
 
-        nuc = self.nuc(td, adiab=adiab)
-        num = self.num(td, adiab=adiab)
-        nu0 = self.nu0(adiab=adiab)
-        tc = self.tc(nu15, adiab=adiab)
-        tm = self.tm(nu15, adiab=adiab)
-        t0 = self.t0(adiab=adiab)
+        nuc = self.nuc(td)
+        num = self.num(td)
+        nu0 = self.nu0()
+        tc = self.tc(nu15)
+        tm = self.tm(nu15)
+        t0 = self.t0()
 
-        Fnu_max = self.Fmax(td, adiab=adiab)
+        Fnu_max = self.Fmax(td)
 
         for i in range(Nt):
             for j in range(Nnu):

@@ -5,28 +5,35 @@ import SAPyto.SRtoolkit as SR
 import extractor.fromHDF5 as extr
 
 
+#
 #  #####    ##   #####    ##   #    #  ####
 #  #    #  #  #  #    #  #  #  ##  ## #
 #  #    # #    # #    # #    # # ## #  ####
 #  #####  ###### #####  ###### #    #      #
 #  #      #    # #   #  #    # #    # #    #
 #  #      #    # #    # #    # #    #  ####
-
-
 class SSCC_params(object):
 
     def params(self):
         # -----  PARAMETERS  -----
-        self.R = 1e18                   # radius of emitting region (assuming spherical)
+        self.R = 1e15                   # radius of emitting region (assuming spherical)
         self.dLum = 4.0793e26           # luminosity distance (default Mrk 421)
         self.z = 0.03                   # redshift (default Mrk 421)
-        self.gamma_bulk = 10.0          # emitting region bulk Lorentz factor
+        self.gamma_bulk = 1e2           # emitting region bulk Lorentz factor
         self.theta_obs = 5.0            # observer viewing angle
         self.B = 1.0                    # magnetic field magnitude
         self.theta_e = 10.0             # electrons temperature
         self.dtacc = 1e2                # injection period
+        self.tstep = 1e-2               # time step factor
+        self.tmax = 1e5                 # maximum time
+        self.n0 = 1.0                   # num. dens. of particles injected
         self.g1 = 1e2                   # power-law min Lorentz factor
         self.g2 = 1e4                   # power-law max Lorentz factor
+        self.gmin = 1.01                # EED minimum Lorentz factor
+        self.gmax = 2e4                 # EED maximum Lorentz factor
+        self.qind = 2.5                 # EED power-law index
+        self.numin = 1e7                # minimum frequency
+        self.numax = 1e15               # maximum frequency
         self.numbins = 128              # number of EED bins
         self.numdt = 300                # number of time steps
         self.numdf = 256                # number of frequencies
@@ -51,20 +58,28 @@ class SSCC_params(object):
 
     def write_params(self):
         with open(self.params_file, 'w') as f:
-            print(fortran_double(self.R), file=f)
-            print(fortran_double(self.dLum), file=f)
-            print(fortran_double(self.z), file=f)
-            print(fortran_double(self.gamma_bulk), file=f)
-            print(fortran_double(self.theta_obs), file=f)
-            print(fortran_double(self.B), file=f)
-            print(fortran_double(self.theta_e), file=f)
-            print(fortran_double(self.dtacc), file=f)
-            print(fortran_double(self.g1), file=f)
-            print(fortran_double(self.g2), file=f)
-            print(self.numbins, file=f)
-            print(self.numdt, file=f)
-            print(self.numdf, file=f)
-            print(self.file_label, file=f)
+            print(fortran_double(self.R), '! Radius', file=f)
+            print(fortran_double(self.dLum), '! luminosity distance', file=f)
+            print(fortran_double(self.z), '! redshift', file=f)
+            print(fortran_double(self.gamma_bulk), '! bulk Lorentz factor', file=f)
+            print(fortran_double(self.theta_obs), '! viewing angle', file=f)
+            print(fortran_double(self.B), '! magnetic field', file=f)
+            print(fortran_double(self.theta_e), '! electrons temperature', file=f)
+            print(fortran_double(self.dtacc), '! injection period',  file=f)
+            print(fortran_double(self.tstep), '! time step factor', file=f)
+            print(fortran_double(self.tmax), '! maximum time', file=f)
+            print(fortran_double(self.n0), '! num. dens. of particles injected', file=f)
+            print(fortran_double(self.g1), '! power-law min Lorentz factor', file=f)
+            print(fortran_double(self.g2), '! power-law max Lorentz factor', file=f)
+            print(fortran_double(self.gmin), '! EED min Lorentz factor', file=f)
+            print(fortran_double(self.gmax), '! EED max Lorentz factor', file=f)
+            print(fortran_double(self.qind), '! EED power-law index', file=f)
+            print(fortran_double(self.numin), '! min frequency', file=f)
+            print(fortran_double(self.numax), '! max frequency', file=f)
+            print(self.numbins, '! number of EED bins', file=f)
+            print(self.numdt, '! number of time steps', file=f)
+            print(self.numdf, '! number of frequencies', file=f)
+            print(self.file_label, '! label to identify each output', file=f)
 
     def output_file(self):
         outf = ''
@@ -103,14 +118,13 @@ class SSCC_params(object):
         return outf + '-' + self.file_label + '.h5', argv
 
 
+#
 #  #####  #    # #    #
 #  #    # #    # ##   #
 #  #    # #    # # #  #
 #  #####  #    # #  # #
 #  #   #  #    # #   ##
 #  #    #  ####  #    #
-
-
 class runSSCC(object):
     def __init__(self, **kwargs):
         self.par = SSCC_params(**kwargs)
@@ -155,13 +169,14 @@ class runSSCC(object):
         os.chdir(self.cwd)
 
 
+#
 #   ####  #    # ##### #####  #    # #####
 #  #    # #    #   #   #    # #    #   #
 #  #    # #    #   #   #    # #    #   #
 #  #    # #    #   #   #####  #    #   #
 #  #    # #    #   #   #      #    #   #
 #   ####   ####    #   #       ####    #
-
+#
 
 def build_LCs(nu_min, nu_max, dset='Inut', only_load=True, inJanskys=False, **kwargs):
     run = runSSCC(**kwargs)
@@ -205,7 +220,7 @@ def build_avSpec(t_min, t_max, dset='Inut', only_load=True, inJanskys=False, **k
         return nu_obs, sp.averaged(t_min, t_max, run.par.numdf, t_obs, Fnu)
 
 
-def build_SEDs(dset='Inut', only_load=True, inJanskys=False, **kwargs):
+def build_totSpec(dset='Inut', only_load=True, inJanskys=False, **kwargs):
     run = runSSCC(**kwargs)
     if not only_load:
         run.cleanup()
@@ -214,13 +229,17 @@ def build_SEDs(dset='Inut', only_load=True, inJanskys=False, **kwargs):
     D = SR.Doppler(run.par.gamma_bulk, run.par.theta_obs)
     nu = extr.hdf5Extract1D(run.outfile, 'frequency')
     t = extr.hdf5Extract1D(run.outfile, 'time')
+    sLum = extr.hdf5Extract1D(run.outfile, 'sen_lum')
     nu_obs = SR.nu_obs(nu, run.par.z, run.par.gamma_bulk, run.par.theta_obs)
     t_obs = SR.t_obs(t, run.par.z, run.par.gamma_bulk, view_angle=run.par.theta_obs)
     Inu = extr.hdf5Extract2D(run.outfile, dset)
-    Fnu = spec.flux_dens(Inu, run.par.dLum, run.par.z, D, run.par.R)
+    Fnu = spec.flux_dens(Inu, run.par.dLum, run.par.z, D, run.par.dLum - sLum)
+    # print(Inu)
+    # print(Fnu)
     sp = spec.spectrum()
+    Spec = sp.averaged(t_obs[0], t_obs[-1], run.par.numdf, t_obs, Fnu)
 
     if inJanskys:
-        return nu_obs, spec.conv2Jy(sp.averaged(t_obs[0], t_obs[-1], run.par.numdf, t_obs, Fnu))
+        return nu_obs, spec.conv2Jy(Spec)
     else:
-        return nu_obs, sp.averaged(t_obs[0], t_obs[-1], run.par.numdf, t_obs, Fnu)
+        return nu_obs, Spec

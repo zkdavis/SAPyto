@@ -1,5 +1,5 @@
 import numpy as np
-from SAPyto.magnetobrem import cLight
+from astropy import constants as const
 
 
 def speed(gamma):
@@ -60,4 +60,4 @@ def t_obs(t, z, gamma, x=0.0, view_angle=0.0):
     '''
     mu_obs = np.cos(view_angle)
     D = Doppler(gamma, view_angle)
-    return (1.0 + z) * (t / D + gamma * x * (speed(gamma) - mu_obs) / cLight)
+    return (1.0 + z) * (t / D + gamma * x * (speed(gamma) - mu_obs) / const.c.cgs.value)

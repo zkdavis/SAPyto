@@ -1,6 +1,9 @@
 # In[]: preparing stuff
 import os
+import os.path
 import SAPyto.SSCCdriver as driver
+import SAPyto.spectra as sp
+import SAPyto.models as mod
 import matplotlib.pyplot as plt
 
 # If one wants to run this script using, e.g., Atoms' Hydrogen package or

@@ -3,9 +3,6 @@ import numpy.ma as ma
 import SAPyto.misc as misc
 import SAPyto.pwlFuncs as pwlf
 
-# TODO produce spectra from nearest t
-# TODO produce spectra from integrating light curve over time
-
 
 def conv2Jy(flux):
     '''Convert flux density (in egs cm^{-2} s^{-1} Hz^{-1}) to janskys.
@@ -16,9 +13,10 @@ def conv2Jy(flux):
 def flux_dens(Inu, dL, z, D, R):
     '''Calculates the flux density using the formula in Zheng & Zheng, 2011, ApJ, 728, 105.
     '''
-    return np.pi * R**2 * D**3 * (1.0 + z) * Inu / dL**2
+    return (np.pi * ((R**2) * Inu.T) * D**3 * (1.0 + z) / dL**2).T
 
 
+#
 #  #      #  ####  #    # #####  ####  #    # #####  #    # ######  ####
 #  #      # #    # #    #   #   #    # #    # #    # #    # #      #
 #  #      # #      ######   #   #      #    # #    # #    # #####   ####
@@ -194,6 +192,8 @@ class spectrum:
     def averaged(self, t_min, t_max, numf, times, flux):
         '''This function returns the averaged spectrum over the period [t_min, t_max]
         '''
+        # print(t_min, t_max, numf, times, flux)
+        # print(self.integ(t_min, t_max, numf, times, flux, ret_tmasked=True))
         spec, tt = self.integ(t_min, t_max, numf, times, flux, ret_tmasked=True)
         tott = np.sum(tt[1:] - tt[:-1])
         return spec / tott
