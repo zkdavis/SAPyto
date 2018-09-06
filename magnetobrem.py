@@ -3,6 +3,7 @@ import numpy as np
 import scipy.integrate as integrate
 from astropy import constants as const
 from SAPyto import misc
+import extractor.fromHDF5 as extr
 import SAPyto.SRtoolkit as SR
 
 cLight = const.c.cgs.value
@@ -49,7 +50,7 @@ class mbs:
     def Psyn_iso(gamma, B):
         '''Total synchrotron radiated power for an isotropic distribution of
         velocities. Formula given in Rybicki & Lightman (1985), eq. (6.7b):
-        
+
             P = (4 / 3) sigma_T c beta^2 gamma^2 (B^2 / 8 pi)
         '''
         return 4.0 * sigmaT * cLight * SR.speed2(gamma) * gamma**2 * B**2 / (24.0 * np.pi)
@@ -71,10 +72,10 @@ class mbs:
             return 1.8084180211028021 * np.power(Xc, 1.0 / 3.0)
         if asym_high:
             return 0.5 * np.pi * (1.0 - 11.0 / (18.0 * Xc)) * np.exp(-Xc)
-        return 0.5 * np.pi * Xc * (misc.whittW(0.0, 4.0 / 3.0, Xc) *
-                                   misc.whittW(0.0, 1.0 / 3.0, Xc) -
-                                   misc.whittW(0.5, 5.0 / 6.0, Xc) *
-                                   misc.whittW(-0.5, 5.0 / 6.0, Xc))
+        return 0.5 * np.pi * Xc * (misc.whittW(0.0, 4.0 / 3.0, Xc)
+                                   * misc.whittW(0.0, 1.0 / 3.0, Xc)
+                                   - misc.whittW(0.5, 5.0 / 6.0, Xc)
+                                   * misc.whittW(-0.5, 5.0 / 6.0, Xc))
 
     def SL07(self, Xc):
         '''Approximation in Schlickeiser & Lerche (2007)'''
@@ -111,6 +112,7 @@ class mbs:
                              lambda x: B(x),
                              lambda x: self.Rsync(x, asym_high=True)])
 
+    #
     #  ######  #     #    #
     #  #     # ##   ##   # #
     #  #     # # # # #  #   #
@@ -118,7 +120,6 @@ class mbs:
     #  #   #   #     # #######
     #  #    #  #     # #     #
     #  #     # #     # #     #
-
     def RMAfit(self, Xc, g):
         '''Fit by Rueda-Becerril (2017)'''
         # xg3 = Xc * g**3
@@ -160,3 +161,97 @@ class mbs:
         return np.piecewise(Xc,
                             [Xc * g**3 <= 0.53, Xc * g**3 > 0.53],
                             [0.0, lambda x: x * self.SL07(x)])
+
+
+#
+#                #######
+#   ####  #####     #      ##   #####  #      ######
+#  #      #    #    #     #  #  #    # #      #
+#   ####  #    #    #    #    # #####  #      #####
+#       # #####     #    ###### #    # #      #
+#  #    # #         #    #    # #    # #      #
+#   ####  #         #    #    # #####  ###### ######
+class spTable(object):
+
+    def __init__(self, tabname='spTable.h5'):
+        self.Nc = extr.hdf5ExtractScalar(tabname, 'num_chi', group='Params')
+        self.Ng = extr.hdf5ExtractScalar(tabname, 'num_gam', group='Params')
+        self.chi_min, self.chi_max = extr.hdf5ExtractScalar(tabname, ['chi_min', 'chi_max'], group='Params')
+        self.Gmin, self.Gmax = extr.hdf5ExtractScalar(tabname, ['g_min', 'g_max'], group='Params')
+
+        self.RPcoefs, self.log_chi, self.log_xi_min = extr.hdf5Extract1D(tabname, ['RadPow_Coefs', 'chi', 'xi_min'])
+
+        self.RadPower, self.log_xi, self.log_gamma = extr.hdf5Extract2D(tabname, ['RadPower', 'xi', 'gamma'])
+
+        self.xi_max = 0.0
+        self.dchi = 1.0 / (self.log_chi[1:] - self.log_chi[:-1])
+
+    def I1_interp(self, chi=None, gamma=None):
+        if chi is None:
+            lchi = self.log_chi
+            Nchi = self.Nc - 1
+        else:
+            lchi = np.log(chi)
+            Nchi = chi.size
+        if gamma is None:
+            lgamma = np.linspace(np.log(self.Gmin), np.log(self.Gmax), num=self.Ng)
+            Ngam = self.Ng - 1
+        else:
+            lgamma = np.log(gamma)
+            Ngam = gamma.size
+        # self.chiL = np.empty(numg*numc)
+        # gammaL = np.empty(numg*numc)
+        interp = []
+        for lg in lgamma:
+            for lc in lchi:
+                i = np.min([self.Nc - 2, np.argmin(np.abs(lc - self.log_chi))])
+                if lc < self.log_chi[i]:
+                    i = np.max([0, i - 1])
+                if lc > self.log_chi[i + 1]:
+                    i = np.min([self.Nc - 1, i + 1])
+                # print(i)
+                u = (lc - self.log_chi[i]) * self.dchi[i]
+                u1 = 1.0 - u
+                if lg < self.log_xi_min[i]:
+                    if lg < self.log_xi_min[i + 1]:
+                        interp.append(np.log(1e-200))
+                    else:
+                        coefs = self.RPcoefs[(i + 1) * self.Ng:(i + 2) * self.Ng]
+                        val = misc.chebev(lg, coefs, self.log_xi_min[i + 1], 0.0)
+                        interp.append(u * val)
+                else:
+                    if lg < self.log_xi_min[i + 1]:
+                        coefs = self.RPcoefs[i * self.Ng:(i + 1) * self.Ng]
+                        val = misc.chebev(lg, coefs, self.log_xi_min[i], 0.0)
+                        interp.append(u1 * val)
+                    else:
+                        coefs = self.RPcoefs[(i + 1) * self.Ng:(i + 2) * self.Ng]
+                        val = misc.chebev(lg, coefs, self.log_xi_min[i + 1], 0.0)
+                        coefs = self.RPcoefs[i * self.Ng:(i + 1) * self.Ng]
+                        valp = misc.chebev(lg, coefs, self.log_xi_min[i], 0.0)
+                        interp.append(u1 * valp + u * val)
+        return np.reshape(np.asarray(interp), (Ngam, Nchi))
+
+
+#
+#                  #######
+#  #####  #  ####     #      ##   #####  #      ######
+#  #    # # #         #     #  #  #    # #      #
+#  #    # #  ####     #    #    # #####  #      #####
+#  #    # #      #    #    ###### #    # #      #
+#  #    # # #    #    #    #    # #    # #      #
+#  #####  #  ####     #    #    # #####  ###### ######
+class disTable(object):
+
+    def __init__(self, tabname='disTable.h5', absor=True, RMA=True):
+        self.Nx, self.Ng, self.Nq = extr.hdf5ExtractScalar(tabname, ['num_chi', 'num_gam', 'num_q'], group='Params')
+        self.globGmin, self.globGmax = extr.hdf5ExtractScalar(tabname, ['g_min', 'g_max'], group='Params')
+
+        self.log_chi, self.q, self.xi_min = extr.hdf5Extract1D(tabname, ['chi', 'q', 'xi_min'])
+        self.jTable = extr.hdf5Extract1D(tabname, 'disTable')
+        if absor:
+            self.aTable = extr.hdf5Extract1D(tabname, 'adisTable')
+        if RMA:
+            self.jRMATable = extr.hdf5Extract1D(tabname, 'RMATable')
+        if absor and RMA:
+            self.aRMATable = extr.hdf5Extract1D(tabname, 'aRMATable')
