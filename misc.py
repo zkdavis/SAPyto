@@ -72,8 +72,6 @@ def find_nearest(arr, val):
 #  #  #  # #   #     #   #    # #   #  #      #   #
 #   ## ##  #   #     #   #    # #    # ###### #    #
 #
-
-
 def whittM(k, m, z):
     """Evaluates the Whitaker function M(k, m, z) as defined in Abramowitz &
     Stegun, Section 13.1.
@@ -96,3 +94,25 @@ def whittW(k, m, z):
         return np.exp(-0.5 * z) * np.power(z, 0.5 + float(m)) * hyperu(0.5 + float(m - k), 1 + 2 * m, z)
     else:
         return np.exp(-0.5 * z) * np.power(z, 0.5 + m) * hyperu(0.5 + m - k, 1.0 + 2.0 * m, z)
+
+
+#
+#   #####
+#  #     # #    # ###### #####  #   #  ####  #    # ###### #    #
+#  #       #    # #      #    #  # #  #    # #    # #      #    #
+#  #       ###### #####  #####    #   #      ###### #####  #    #
+#  #       #    # #      #    #   #   #      #    # #      #    #
+#  #     # #    # #      #    #   #   #    # #    # #       #  #
+#   #####  #    # ###### #####    #    ####  #    # ######   ##
+def chebev(x, c, xmin, xmax):
+    d = 0.0
+    dd = 0.0
+    y = (2.0 * x - xmin - xmax) / (xmax - xmin)
+    y2 = 2.0 * y
+    j = c.size - 1
+    while j > 0:
+        sv = dd
+        dd = d
+        d = y2 * dd - sv + c[j]
+        j -= 1
+    return y * d - dd + 0.5 * c[0]
