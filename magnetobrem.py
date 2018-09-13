@@ -235,45 +235,81 @@ class spTable(object):
 #  #####  #  ####     #    #    # #####  ###### ######
 class disTable(object):
 
-    def __init__(self, tabname='disTable.h5', absor=True, RMA=True):
+    def __init__(self, tabname='disTable.h5', absor=True, RMA=False):
         self.Nx, self.Ng, self.Nq = extr.hdf5ExtractScalar(tabname, ['num_chi', 'num_gam', 'num_q'], group='Params')
         self.globGmin, self.globGmax = extr.hdf5ExtractScalar(tabname, ['g_min', 'g_max'], group='Params')
         self.log_chi, self.qq, self.xi_min = extr.hdf5Extract1D(tabname, ['chi', 'q', 'xi_min'])
         self.jTable = extr.hdf5Extract1D(tabname, 'disTable')
+        # --->  With absorption?
         if absor:
             self.aTable = extr.hdf5Extract1D(tabname, 'adisTable')
+        else:
+            self.aTable = None
+        # --->  With analytic table?
         if RMA:
             self.jRMATable = extr.hdf5Extract1D(tabname, 'RMATable')
+        else:
+            self.jRMATable = None
+        # --->  With absorption analytic table?
         if absor and RMA:
             self.aRMATable = extr.hdf5Extract1D(tabname, 'aRMATable')
+        else:
+            self.aRMATable = None
 
         self.dchi = 1.0 / (self.log_chi[1:] - self.log_chi[:-1])
         self.dq = 1.0 / (self.qq[1:] - self.qq[:-1])
 
-    # def I3_interp(self, lc, lg, q):
-    #     # --->  Locating the position of lc
-    #     i = np.argmin(np.abs(lc - self.log_chi))
-    #     if lc < self.log_chi[i]:
-    #         i = np.max([0, i - 1])
-    #     if lc > self.log_chi[i + 1]:
-    #         i = np.min([self.Nc - 2, i + 1])
-    #     # --->  Locating the position of q
-    #     j = np.argmin(np.abs(q - self.qq))
-    #     if q < self.qq[j]:
-    #         j = np.max([0, j - 1])
-    #     if q > self.qq[j + 1]:
-    #         j = np.min([self.Nq - 2, j + 1])
+    def I3_interp(self, lc, lg, q, chtab=None):
+        # --->  Locating the position of lc
+        i = np.argmin(np.abs(lc - self.log_chi))
+        if lc < self.log_chi[i]:
+            i = np.max([0, i - 1])
+        if lc > self.log_chi[i + 1]:
+            i = np.min([self.Nc - 2, i + 1])
+        # --->  Locating the position of q
+        j = np.argmin(np.abs(q - self.qq))
+        if q < self.qq[j]:
+            j = np.max([0, j - 1])
+        if q > self.qq[j + 1]:
+            j = np.min([self.Nq - 2, j + 1])
+
+        u = (lc - self.log_chi[i]) * self.dchi[i]
+        u1 = 1.0 - u
+        v = (q - self.qq[i]) * self.dq[i]
+        v1 = 1.0 - v
+
+        if chtab is None:
+            chtab = self.jTable
+
+        if lg < self.log_xi_min[i + 1] or lg < self.log_xi_min[i + 1]:
+            return 0.0
+        else:
+            coefs = chtab[(j + i * self.Nq) * self.Ng:(1 + j + i * self.Nq) * self.Ng]
+            valij = misc.chebev(lg, coefs, self.log_xi_min[i + 1], 0.0)
+            coefs = chtab[((j - 1) + i * self.Nq) * self.Ng:(j + i * self.Nq) * self.Ng]
+            valijp = misc.chebev(lg, coefs, self.log_xi_min[i + 1], 0.0)
+            coefs = chtab[((j - 1) + (i - 1) * self.Nq) * self.Ng:(j + (i - 1) * self.Nq) * self.Ng]
+            valipjp = misc.chebev(lg, coefs, self.log_xi_min[i], 0.0)
+            coefs = chtab[(j + (i - 1) * self.Nq) * self.Ng:(1 + j + (i - 1) * self.Nq) * self.Ng]
+            valipj = misc.chebev(lg, coefs, self.log_xi_min[i + 1], 0.0)
+            return u1 * v1 * valipjp + u * v1 * valijp + u1 * v * valipj + u * v * valij
+
     #
-    #     u = (lc - self.log_chi[i]) * self.dchi[i]
-    #     u1 = 1.0 - u
-    #     v = (q - self.qq[i]) * self.dq[i]
-    #     v1 = 1.0 - v
+    #  ###### #    # #  ####   ####  # #    # # ##### #   #
+    #  #      ##  ## # #      #      # #    # #   #    # #
+    #  #####  # ## # #  ####   ####  # #    # #   #     #
+    #  #      #    # #      #      # # #    # #   #     #
+    #  #      #    # # #    # #    # #  #  #  #   #     #
+    #  ###### #    # #  ####   ####  #   ##   #   #     #
+    def j_mb(nu, B, n0, gmin, gmax, qind, jmbtab=None):
+        return 1
     #
-    #     if lg < self.log_xi_min[i + 1] or lg < self.log_xi_min[i + 1]:
-    #         return 0.0
-    #     else:
-    #         coefs = self.RPcoefs[i * self.Ng:(i + 1) * self.Ng]
-    #         val = misc.chebev(lg, coefs, self.log_xi_min[i + 1], 0.0)
-    #         coefs = self.RPcoefs[(i - 1) * self.Ng:i * self.Ng]
-    #         valp = misc.chebev(lg, coefs, self.log_xi_min[i], 0.0)
-    #         return u1 * v1 * valipjp + u * v1 * valijp + u1 * v * valipj + u * v * valij
+    #    ##   #####   ####   ####  #####  #####  ##### #  ####  #    #
+    #   #  #  #    # #      #    # #    # #    #   #   # #    # ##   #
+    #  #    # #####   ####  #    # #    # #    #   #   # #    # # #  #
+    #  ###### #    #      # #    # #####  #####    #   # #    # #  # #
+    #  #    # #    # #    # #    # #   #  #        #   # #    # #   ##
+    #  #    # #####   ####   ####  #    # #        #   #  ####  #    #
+
+    def a_mb(nu, B, n0, gmin, gmax, qind, jmbtab=None):
+        return 1
