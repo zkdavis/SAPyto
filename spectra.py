@@ -23,8 +23,6 @@ def flux_dens(Inu, dL, z, D, R):
 #  #      # #  ### #    #   #   #      #    # #####  #    # #           #
 #  #      # #    # #    #   #   #    # #    # #   #   #  #  #      #    #
 #  ###### #  ####  #    #   #    ####   ####  #    #   ##   ######  ####
-
-
 class LightCurves:
     def __init__(self):
         pass
@@ -103,14 +101,13 @@ class LightCurves:
         return lc
 
 
+#
 #   ####  #####  ######  ####  ##### #####    ##
 #  #      #    # #      #    #   #   #    #  #  #
 #   ####  #    # #####  #        #   #    # #    #
 #       # #####  #      #        #   #####  ######
 #  #    # #      #      #    #   #   #   #  #    #
 #   ####  #      ######  ####    #   #    # #    #
-
-
 class spectrum:
     def __init__(self):
         pass
@@ -197,3 +194,44 @@ class spectrum:
         spec, tt = self.integ(t_min, t_max, numf, times, flux, ret_tmasked=True)
         tott = np.sum(tt[1:] - tt[:-1])
         return spec / tott
+
+
+#
+#   #####                                           ######
+#  #     #  ####  #    # #####  #####  ####  #    # #     #  ####  #    #
+#  #       #    # ##  ## #    #   #   #    # ##   # #     # #    # ##  ##
+#  #       #    # # ## # #    #   #   #    # # #  # #     # #    # # ## #
+#  #       #    # #    # #####    #   #    # #  # # #     # #    # #    #
+#  #     # #    # #    # #        #   #    # #   ## #     # #    # #    #
+#   #####   ####  #    # #        #    ####  #    # ######   ####  #    #
+def ComptonDom(nus, Fsyn, Fic, t_min, t_max, times):
+    spec = spectrum()
+    # pwli = pwlf.PwlInteg()
+    Nf = nus.size
+
+    # NOTE  synchrotron spectrum and peak
+    synint = spec.integ(t_min, t_max, Nf, times, Fsyn)
+    syn_pos = synint.argmax()
+    syn_peak = synint[syn_pos]
+    nu_syn = nus[syn_pos]
+
+    # syntot = 0.0
+    # for j in range(Nf - 1):
+    #     if (synint[j] > 1e-100) & (synint[j + 1] > 1e-100):
+    #         s = -np.log(synint[j + 1] / synint[j]) / np.log(nus[j + 1] / nus[j])
+    #         syntot += synint[j] * nus[j] * pwli.P(nus[j + 1] / nus[j], s)
+
+    # NOTE  IC spectrum and peak
+    ICint = spec.integ(t_min, t_max, Nf, times, Fic)
+    IC_pos = ICint.argmax()
+    IC_peak = ICint[IC_pos]
+    nu_IC = nus[IC_pos]
+
+    # ICtot = 0.0
+    # for j in range(Nf - 1):
+    #     if (ICint[j] > 1e-100) & (ICint[j + 1] > 1e-100):
+    #         s = -np.log(ICint[j + 1] / ICint[j]) / np.log(nus[j + 1] / nus[j])
+    #         ICtot += ICint[j] * nus[j] * pwli.P(nus[j + 1] / nus[j], s)
+
+    A_C = IC_peak / syn_peak
+    return nu_syn, nu_IC, A_C

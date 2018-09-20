@@ -1,7 +1,5 @@
 import numpy as np
 
-np.logspace
-
 
 class SPN98(object):
     '''Following This is the setup for the model in Sari, Piran & Narayan, 1998,

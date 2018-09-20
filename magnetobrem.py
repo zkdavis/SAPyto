@@ -2,19 +2,25 @@ import scipy.special as scisp
 import numpy as np
 import scipy.integrate as integrate
 from astropy import constants as const
-from SAPyto import misc
 import extractor.fromHDF5 as extr
+from SAPyto import misc
 import SAPyto.SRtoolkit as SR
+import SAPyto.pwlFuncs as pwlf
 
+
+halfpi = 0.5 * np.pi
+twopi = 2.0 * np.pi
 cLight = const.c.cgs.value
 eCharge = const.e.gauss.value
 hPlanck = const.h.cgs.value
 me = const.m_e.cgs.value
 mp = const.m_p.cgs.value
 sigmaT = const.sigma_T.cgs.value
-nuconst = eCharge / (2.0 * np.pi * me * cLight)
-halfpi = 0.5 * np.pi
-twopi = 2.0 * np.pi
+nuConst = eCharge / (twopi * me * cLight)
+jmbConst = twopi * eCharge**2 / cLight
+ambConst = np.pi * eCharge**2 / (me * cLight)
+chunche_c100g100 = 2.2619939050180366385e-6
+chunche_c100g20 = 2.1157699720918349273e-1
 
 
 class mbs:
@@ -196,7 +202,7 @@ class spTable(object):
         u = (lc - self.log_chi[i]) * self.dchi[i]
         u1 = 1.0 - u
 
-        if lg < self.log_xi_min[i + 1] or lg < self.log_xi_min[i + 1]:
+        if (lg < self.log_xi_min[i + 1]) | (lg < self.log_xi_min[i + 1]):
             return 0.0
         else:
             coefs = self.RPcoefs[i * self.Ng:(i + 1) * self.Ng]
@@ -238,7 +244,7 @@ class disTable(object):
     def __init__(self, tabname='disTable.h5', absor=True, RMA=False):
         self.Nx, self.Ng, self.Nq = extr.hdf5ExtractScalar(tabname, ['num_chi', 'num_gam', 'num_q'], group='Params')
         self.globGmin, self.globGmax = extr.hdf5ExtractScalar(tabname, ['g_min', 'g_max'], group='Params')
-        self.log_chi, self.qq, self.xi_min = extr.hdf5Extract1D(tabname, ['chi', 'q', 'xi_min'])
+        self.log_chi, self.qq, self.log_xi_min = extr.hdf5Extract1D(tabname, ['chi', 'q', 'xi_min'])
         self.jTable = extr.hdf5Extract1D(tabname, 'disTable')
         # --->  With absorption?
         if absor:
@@ -259,7 +265,15 @@ class disTable(object):
         self.dchi = 1.0 / (self.log_chi[1:] - self.log_chi[:-1])
         self.dq = 1.0 / (self.qq[1:] - self.qq[:-1])
 
-    def I3_interp(self, lc, lg, q, chtab=None):
+    def I3_interp(self, lc, lx, q, chtab=None):
+        '''
+        Input
+            lc: log(chi)
+            lx: log(xi), where xi = gamma / globGmax
+            q : power-law index
+        Optional
+            chtab: name of table loaded
+        '''
         # --->  Locating the position of lc
         i = np.argmin(np.abs(lc - self.log_chi))
         if lc < self.log_chi[i]:
@@ -275,24 +289,25 @@ class disTable(object):
 
         u = (lc - self.log_chi[i]) * self.dchi[i]
         u1 = 1.0 - u
-        v = (q - self.qq[i]) * self.dq[i]
+        v = (q - self.qq[j]) * self.dq[j]
         v1 = 1.0 - v
 
         if chtab is None:
             chtab = self.jTable
 
-        if lg < self.log_xi_min[i + 1] or lg < self.log_xi_min[i + 1]:
-            return 0.0
+        if (lx < self.log_xi_min[i + 1]) | (lx < self.log_xi_min[i + 1]):
+            emiss = 0.0
         else:
             coefs = chtab[(j + i * self.Nq) * self.Ng:(1 + j + i * self.Nq) * self.Ng]
-            valij = misc.chebev(lg, coefs, self.log_xi_min[i + 1], 0.0)
+            valij = misc.chebev(lx, coefs, self.log_xi_min[i + 1], 0.0)
             coefs = chtab[((j - 1) + i * self.Nq) * self.Ng:(j + i * self.Nq) * self.Ng]
-            valijp = misc.chebev(lg, coefs, self.log_xi_min[i + 1], 0.0)
+            valijp = misc.chebev(lx, coefs, self.log_xi_min[i + 1], 0.0)
             coefs = chtab[((j - 1) + (i - 1) * self.Nq) * self.Ng:(j + (i - 1) * self.Nq) * self.Ng]
-            valipjp = misc.chebev(lg, coefs, self.log_xi_min[i], 0.0)
+            valipjp = misc.chebev(lx, coefs, self.log_xi_min[i], 0.0)
             coefs = chtab[(j + (i - 1) * self.Nq) * self.Ng:(1 + j + (i - 1) * self.Nq) * self.Ng]
-            valipj = misc.chebev(lg, coefs, self.log_xi_min[i + 1], 0.0)
-            return u1 * v1 * valipjp + u * v1 * valijp + u1 * v * valipj + u * v * valij
+            valipj = misc.chebev(lx, coefs, self.log_xi_min[i + 1], 0.0)
+            emiss = u1 * v1 * valipjp + u * v1 * valijp + u1 * v * valipj + u * v * valij
+        return np.maximum(np.log(1e-200), emiss)
 
     #
     #  ###### #    # #  ####   ####  # #    # # ##### #   #
@@ -301,8 +316,56 @@ class disTable(object):
     #  #      #    # #      #      # # #    # #   #     #
     #  #      #    # # #    # #    # #  #  #  #   #     #
     #  ###### #    # #  ####   ####  #   ##   #   #     #
-    def j_mb(nu, B, n0, gmin, gmax, qind, jmbtab=None):
-        return 1
+    def j_mb(self, nu, B, n0, gmin, gmax, qind, jmbtab=None):
+        # def f(g, c=1.0, q=2.5):
+        #     return g**(1.0 - q) * mbs.RMAfit(2.0 * c / (3.0 * g**2), g)
+
+        MBS = mbs()
+
+        def f(g, c=1.0, q=2.5):
+            Xc = 2.0 * c / (3.0 * g**2)
+            return (g**(1.0 - q) * MBS.RMAfit(Xc, g))
+
+        lf = pwlf.logFuncs()
+
+        jmbc = 0.125 * jmbConst
+        nuB = nuConst * B
+        chi = nu / nuB
+        lchi = np.log(chi)
+        lxi_min = np.log(gmin / self.globGmax)
+        lxi_max = np.log(gmax / self.globGmax)
+
+        if jmbtab is None:
+            jmbtab = self.jTable
+
+        if lchi < self.log_chi[0]:
+            return "j_mb: input nu below table nu_min"
+
+        i = np.argmin(np.abs(lchi - self.log_chi))
+        if self.log_xi_min[i] >= lxi_max:
+            return 0.0
+        elif (self.log_xi_min[i] >= lxi_min) & (self.log_xi_min[i] < lxi_max):
+            I3min = np.exp(self.I3_interp(lchi, self.log_xi_min[i], qind, chtab=jmbtab))
+            I3max = np.exp(self.I3_interp(lchi, lxi_max, qind, chtab=jmbtab))
+        else:
+            I3min = np.exp(self.I3_interp(lchi, lxi_min, qind, chtab=jmbtab))
+            I3max = np.exp(self.I3_interp(lchi, lxi_max, qind, chtab=jmbtab))
+
+        I3diff = I3min - I3max
+        I3rel = np.abs(I3diff) / np.abs(I3min)
+
+        if I3rel < 1e-5:
+            I3diff = 0.0  # integrate.romberg(f, gmin, gmax, args=(c=chi, ))
+
+        if 0.5 * lf.log2(self.globGmax, 1e-9) * (qind - 1.0)**2 < 1e-3:
+            I2 = (1.0 - lf.log1(self.globGmax, 1e-9) * (qind - 1.0)) * I3diff
+        else:
+            I2 = self.globGmax**(1.0 - qind) * I3diff
+            # WARNING FIXME This is a patch to avoid abnormal values
+            if I2 > 1e3:
+                I2 = chunche_c100g100 * integrate.romberg(f, gmin, gmax, args=(chi, qind), divmax=12)
+        return jmbc * nuB * n0 * I2 * gmin**qind
+
     #
     #    ##   #####   ####   ####  #####  #####  ##### #  ####  #    #
     #   #  #  #    # #      #    # #    # #    #   #   # #    # ##   #
@@ -310,6 +373,42 @@ class disTable(object):
     #  ###### #    #      # #    # #####  #####    #   # #    # #  # #
     #  #    # #    # #    # #    # #   #  #        #   # #    # #   ##
     #  #    # #####   ####   ####  #    # #        #   #  ####  #    #
+    def a_mb(self, nu, B, n0, gmin, gmax, qind, ambtab=None):
+        ambc = 3.90625e-3 * ambConst
+        nuB = nuConst * B
+        lchi = np.log(nu / nuB)
+        lxi_min = np.log(gmin / self.globGmax)
+        lxi_max = np.log(gmax / self.globGmax)
 
-    def a_mb(nu, B, n0, gmin, gmax, qind, jmbtab=None):
-        return 1
+        if ambtab is None:
+            ambtab = self.aTable
+
+        if lchi < self.log_chi[0]:
+            return "a_mb: input nu below table nu_min"
+
+        i = np.argmin(np.abs(lchi - self.log_chi))
+        if self.log_xi_min[i] >= lxi_max:
+            return 0.0
+        elif (self.log_xi_min[i] >= lxi_min) & (self.log_xi_min[i] < lxi_max):
+            A3min = np.exp(self.I3_interp(lchi, self.log_xi_min[i], qind, ambtab))
+            A3max = np.exp(self.I3_interp(lchi, lxi_max, qind, ambtab))
+        else:
+            A3min = np.exp(self.I3_interp(lchi, lxi_min, qind, ambtab))
+            A3max = np.exp(self.I3_interp(lchi, lxi_max, qind, ambtab))
+
+        A3diff = A3min - A3max
+        A3rel = np.abs(A3diff) / np.abs(A3min)
+
+        if A3rel < 2e-5:
+            A3diff = 0.0
+
+        lf = pwlf.logFuncs()
+        if 0.5 * lf.log2(self.globGmax, 1e-9) * (qind - 1.0)**2 < 1e-3:
+            A2 = (1.0 - lf.log1(self.globGmax, 1e-9) * (qind - 1.0)) * A3diff
+        else:
+            A2 = self.globGmax**(1.0 - qind) * A3diff
+            # WARNING FIXME This is a patch to avoid abnormal values
+            if A2 > 1e3:
+                A2 = 0.0
+
+        return ambc * nuB * n0 * A2 * gmin**qind / nu**2
