@@ -274,6 +274,9 @@ class disTable(object):
         Optional
             chtab: name of table loaded
         '''
+        #
+        # DEBUG: Make suger indices are OK
+        #
         # --->  Locating the position of lc
         i = np.argmin(np.abs(lc - self.log_chi))
         if lc < self.log_chi[i]:
@@ -319,7 +322,9 @@ class disTable(object):
     def j_mb(self, nu, B, n0, gmin, gmax, qind, jmbtab=None):
         # def f(g, c=1.0, q=2.5):
         #     return g**(1.0 - q) * mbs.RMAfit(2.0 * c / (3.0 * g**2), g)
-
+        #
+        # DEBUG: Make suger indices are OK
+        #
         MBS = mbs()
 
         def f(g, c=1.0, q=2.5):
@@ -374,6 +379,9 @@ class disTable(object):
     #  #    # #    # #    # #    # #   #  #        #   # #    # #   ##
     #  #    # #####   ####   ####  #    # #        #   #  ####  #    #
     def a_mb(self, nu, B, n0, gmin, gmax, qind, ambtab=None):
+        #
+        # DEBUG: Make suger indices are OK
+        #
         ambc = 3.90625e-3 * ambConst
         nuB = nuConst * B
         lchi = np.log(nu / nuB)

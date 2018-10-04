@@ -42,22 +42,26 @@ def momentum2(gamma):
     return gamma**2 - 1.0
 
 
-def Doppler(gamma, view_angle):
+def Doppler(gamma, view_angle, deg=True):
     '''Doppler factor
     '''
+    if deg:
+        view_angle = np.deg2rad(view_angle)
     return 1.0 / (gamma * (1.0 + speed(gamma) * np.cos(view_angle)))
 
 
-def nu_obs(nu, z, gamma, view_angle=0.0):
+def nu_obs(nu, z, gamma, view_angle=0.0, deg=True):
     '''Compute the observed frequency for a given redshift z.
     '''
-    D = Doppler(gamma, view_angle)
+    D = Doppler(gamma, view_angle, deg=deg)
     return nu * D / (1.0 + z)
 
 
-def t_obs(t, z, gamma, x=0.0, view_angle=0.0):
+def t_obs(t, z, gamma, x=0.0, view_angle=0.0, deg=True):
     '''From Eq. (2.58) in my thesis.
     '''
+    if deg:
+        view_angle = np.deg2rad(view_angle)
     mu_obs = np.cos(view_angle)
-    D = Doppler(gamma, view_angle)
+    D = Doppler(gamma, view_angle, deg=deg)
     return (1.0 + z) * (t / D + gamma * x * (speed(gamma) - mu_obs) / const.c.cgs.value)

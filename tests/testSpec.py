@@ -17,7 +17,7 @@ numt = extr.hdf5ExtractScalar(wdir + f, 'numdt')
 numf = extr.hdf5ExtractScalar(wdir + f, 'numdf')
 
 D = SR.Doppler(10.0, 5.0)
-Fnu = spec.flux_dens(Inu, 4.0793e26, 0.03, D, 1e18)
+Fnu = spec.EnergyFlux(Inu, 4.0793e26, 0.03, D, 1e18)
 nu_obs = SR.nu_obs(nu, 0.03, 10.0, 5.0)
 t_obs = SR.t_obs(t, 0.03, 10.0, view_angle=5.0)
 

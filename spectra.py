@@ -10,10 +10,16 @@ def conv2Jy(flux):
     return flux * 1e23
 
 
-def flux_dens(Inu, dL, z, D, R):
-    '''Calculates the flux density using the formula in Zheng & Zheng, 2011, ApJ, 728, 105.
+def specEnergyFlux(Inu, dL, z, D, R):
+    '''Calculates the spectral energy flux.
     '''
-    return (np.pi * ((R**2) * Inu.T) * D**3 * (1.0 + z) / dL**2).T
+    return np.pi * R**2 * Inu * D**3 * (1.0 + z) / dL**2
+
+
+def EnergyFlux(nuInu, dL, D, R):
+    '''Calculates the energy flux.
+    '''
+    return np.pi * R**2 * nuInu * D**4 / dL**2
 
 
 #
