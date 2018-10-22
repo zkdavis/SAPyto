@@ -58,7 +58,8 @@ def sci_notation(n, prec=3, fortran=False):
 
 
 def find_nearest(arr, val):
-    arr = np.asarray(arr)
+    if (arr != np.ndarray):
+        arr = np.asarray(arr)
     i = (np.abs(arr - val)).argmin()
     return i, arr[i]
 

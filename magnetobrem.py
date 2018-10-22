@@ -21,6 +21,7 @@ jmbConst = twopi * eCharge**2 / cLight
 ambConst = np.pi * eCharge**2 / (me * cLight)
 chunche_c100g100 = 2.2619939050180366385e-6
 chunche_c100g20 = 2.1157699720918349273e-1
+lzero = np.log(1e-200)
 
 
 class mbs:
@@ -202,14 +203,16 @@ class spTable(object):
         u = (lc - self.log_chi[i]) * self.dchi[i]
         u1 = 1.0 - u
 
-        if (lg < self.log_xi_min[i + 1]) | (lg < self.log_xi_min[i + 1]):
-            return 0.0
+        if (lg < self.log_xi_min[i]) | (lg < self.log_xi_min[i + 1]):
+            em = lzero
         else:
             coefs = self.RPcoefs[i * self.Ng:(i + 1) * self.Ng]
             val = misc.chebev(lg, coefs, self.log_xi_min[i + 1], 0.0)
             coefs = self.RPcoefs[(i - 1) * self.Ng:i * self.Ng]
             valp = misc.chebev(lg, coefs, self.log_xi_min[i], 0.0)
-            return u1 * valp + u * val
+            em = u1 * valp + u * val
+        return np.maximum(lzero, em)
+
         #
         # if lg < self.log_xi_min[i]:
         #     if lg < self.log_xi_min[i + 1]:
@@ -298,8 +301,8 @@ class disTable(object):
         if chtab is None:
             chtab = self.jTable
 
-        if (lx < self.log_xi_min[i + 1]) | (lx < self.log_xi_min[i + 1]):
-            emiss = 0.0
+        if (lx < self.log_xi_min[i]) | (lx < self.log_xi_min[i + 1]):
+            emiss = lzero
         else:
             coefs = chtab[(j + i * self.Nq) * self.Ng:(1 + j + i * self.Nq) * self.Ng]
             valij = misc.chebev(lx, coefs, self.log_xi_min[i + 1], 0.0)
@@ -310,7 +313,7 @@ class disTable(object):
             coefs = chtab[(j + (i - 1) * self.Nq) * self.Ng:(1 + j + (i - 1) * self.Nq) * self.Ng]
             valipj = misc.chebev(lx, coefs, self.log_xi_min[i + 1], 0.0)
             emiss = u1 * v1 * valipjp + u * v1 * valijp + u1 * v * valipj + u * v * valij
-        return np.maximum(np.log(1e-200), emiss)
+        return np.maximum(lzero, emiss)
 
     #
     #  ###### #    # #  ####   ####  # #    # # ##### #   #
@@ -320,16 +323,14 @@ class disTable(object):
     #  #      #    # # #    # #    # #  #  #  #   #     #
     #  ###### #    # #  ####   ####  #   ##   #   #     #
     def j_mb(self, nu, B, n0, gmin, gmax, qind, jmbtab=None):
-        # def f(g, c=1.0, q=2.5):
-        #     return g**(1.0 - q) * mbs.RMAfit(2.0 * c / (3.0 * g**2), g)
-        #
-        # DEBUG: Make suger indices are OK
-        #
+        '''Description:
+        This function reproduces the MBS emissivity from a power-law distribution.
+        '''
         MBS = mbs()
 
         def f(g, c=1.0, q=2.5):
             Xc = 2.0 * c / (3.0 * g**2)
-            return (g**(1.0 - q) * MBS.RMAfit(Xc, g))
+            return g**(1.0 - q) * MBS.RMAfit(Xc, g)
 
         lf = pwlf.logFuncs()
 
@@ -359,16 +360,14 @@ class disTable(object):
         I3diff = I3min - I3max
         I3rel = np.abs(I3diff) / np.abs(I3min)
 
-        if I3rel < 1e-5:
-            I3diff = 0.0  # integrate.romberg(f, gmin, gmax, args=(c=chi, ))
-
-        if 0.5 * lf.log2(self.globGmax, 1e-9) * (qind - 1.0)**2 < 1e-3:
-            I2 = (1.0 - lf.log1(self.globGmax, 1e-9) * (qind - 1.0)) * I3diff
+        if (I3rel < 1e-3) | (I3diff < 0.0):
+            I2 = chunche_c100g20 * integrate.romberg(f, gmin, gmax, args=(chi, qind), divmax=12)
         else:
-            I2 = self.globGmax**(1.0 - qind) * I3diff
-            # WARNING FIXME This is a patch to avoid abnormal values
-            if I2 > 1e3:
-                I2 = chunche_c100g100 * integrate.romberg(f, gmin, gmax, args=(chi, qind), divmax=12)
+            if 0.5 * lf.log2(self.globGmax, 1e-6) * (qind - 1.0)**2 < 1e-3:
+                I2 = (1.0 - lf.log1(self.globGmax, 1e-9) * (qind - 1.0)) * I3diff
+            else:
+                I2 = self.globGmax**(1.0 - qind) * I3diff
+
         return jmbc * nuB * n0 * I2 * gmin**qind
 
     #
@@ -379,12 +378,20 @@ class disTable(object):
     #  #    # #    # #    # #    # #   #  #        #   # #    # #   ##
     #  #    # #####   ####   ####  #    # #        #   #  ####  #    #
     def a_mb(self, nu, B, n0, gmin, gmax, qind, ambtab=None):
-        #
-        # DEBUG: Make suger indices are OK
-        #
+        '''Description:
+        This function reproduces the MBS absorption from a power-law distribution.
+        '''
+        MBS = mbs()
+
+        def f(g, c=1.0, q=2.5):
+            Xc = 2.0 * c / (3.0 * g**2)
+            return g**(-q) * MBS.RMAfit(Xc, g) * (q + 1.0 + (g**2 / (g**2 - 1.0)))
+        lf = pwlf.logFuncs()
+
         ambc = 3.90625e-3 * ambConst
         nuB = nuConst * B
-        lchi = np.log(nu / nuB)
+        chi = nu / nuB
+        lchi = np.log(chi)
         lxi_min = np.log(gmin / self.globGmax)
         lxi_max = np.log(gmax / self.globGmax)
 
@@ -398,25 +405,24 @@ class disTable(object):
         if self.log_xi_min[i] >= lxi_max:
             return 0.0
         elif (self.log_xi_min[i] >= lxi_min) & (self.log_xi_min[i] < lxi_max):
-            A3min = np.exp(self.I3_interp(lchi, self.log_xi_min[i], qind, ambtab))
-            A3max = np.exp(self.I3_interp(lchi, lxi_max, qind, ambtab))
+            A3min = np.exp(self.I3_interp(lchi, self.log_xi_min[i], qind, chtab=ambtab))
+            A3max = np.exp(self.I3_interp(lchi, lxi_max, qind, chtab=ambtab))
         else:
-            A3min = np.exp(self.I3_interp(lchi, lxi_min, qind, ambtab))
-            A3max = np.exp(self.I3_interp(lchi, lxi_max, qind, ambtab))
+            A3min = np.exp(self.I3_interp(lchi, lxi_min, qind, chtab=ambtab))
+            A3max = np.exp(self.I3_interp(lchi, lxi_max, qind, chtab=ambtab))
 
         A3diff = A3min - A3max
         A3rel = np.abs(A3diff) / np.abs(A3min)
 
-        if A3rel < 2e-5:
-            A3diff = 0.0
-
-        lf = pwlf.logFuncs()
-        if 0.5 * lf.log2(self.globGmax, 1e-9) * (qind - 1.0)**2 < 1e-3:
-            A2 = (1.0 - lf.log1(self.globGmax, 1e-9) * (qind - 1.0)) * A3diff
+        if (A3rel < 1e-3) | (A3diff < 0.0):
+            # A2 = 0.0
+            A2 = integrate.romberg(f, gmin, gmax, args=(chi, qind))
         else:
-            A2 = self.globGmax**(1.0 - qind) * A3diff
-            # WARNING FIXME This is a patch to avoid abnormal values
-            if A2 > 1e3:
-                A2 = 0.0
+            if 0.5 * lf.log2(self.globGmax, 1e-6) * (qind - 1.0)**2 < 1e-3:
+                A2 = (1.0 - lf.log1(self.globGmax, 1e-9) * (qind - 1.0)) * A3diff
+            else:
+                A2 = self.globGmax**(1.0 - qind) * A3diff
+
+        # A2 = integrate.romberg(f, gmin, gmax, args=(chi, qind), divmax=12)
 
         return ambc * nuB * n0 * A2 * gmin**qind / nu**2

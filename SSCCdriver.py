@@ -16,17 +16,20 @@ class SSCC_params(object):
 
     def params(self):
         # -----  PARAMETERS  -----
-        self.R = 1e15                   # radius of emitting region (assuming spherical)
+        self.R = 1e18                   # radius of emitting region (assuming spherical)
+        self.R0 = 1e15                  # radius of emitting region (assuming spherical)
+        self.Rinit = 1e15               # radius of emitting region (assuming spherical)
         self.dLum = 4.0793e26           # luminosity distance (default Mrk 421)
         self.z = 0.03                   # redshift (default Mrk 421)
         self.gamma_bulk = 1e2           # emitting region bulk Lorentz factor
         self.theta_obs = 5.0            # observer viewing angle
         self.B = 1.0                    # magnetic field magnitude
+        self.b_index = 0.0              # magnetic field decay index
         self.theta_e = 10.0             # electrons temperature
         self.dtacc = 1e2                # injection period
         self.tstep = 1e-2               # time step factor
         self.tmax = 1e5                 # maximum time
-        self.n0 = 1.0                   # num. dens. of particles injected
+        self.Q0 = 1.0                   # num. dens. of particles injected per second
         self.g1 = 1e2                   # power-law min Lorentz factor
         self.g2 = 1e4                   # power-law max Lorentz factor
         self.gmin = 1.01                # EED minimum Lorentz factor
@@ -37,13 +40,15 @@ class SSCC_params(object):
         self.numbins = 128              # number of EED bins
         self.numdt = 300                # number of time steps
         self.numdf = 256                # number of frequencies
+        self.cool_kind = 1              # kind of cooling
+        self.time_grid = 1              # kind of cooling
         # -----  ARGS OF THE EXECUTABLE  -----
         self.wCool = True               # variable cooling
         self.wMBSabs = True             # compute MBS self-absorption
         self.wSSCem = True              # compute SSC emissivity
         # -----  INPUT AND OUTPUT  -----
         self.file_label = 'DriverTest'  # a label to identify each output
-        self.ISdir = './'               # address to InternalShocks, must end with '/'
+        self.exec_dir = './'               # address to InternalShocks, must end with '/'
         self.params_file = 'input.par'  # name of the parameters file
         # -----  COMPILER PARAMS  -----
         self.HYB = True                 # compile with HYB=1 flag
@@ -59,16 +64,19 @@ class SSCC_params(object):
     def write_params(self):
         with open(self.params_file, 'w') as f:
             print(fortran_double(self.R), '! Radius', file=f)
+            print(fortran_double(self.R0), '! Normalization radius', file=f)
+            print(fortran_double(self.Rinit), '! Initial radius', file=f)
             print(fortran_double(self.dLum), '! luminosity distance', file=f)
             print(fortran_double(self.z), '! redshift', file=f)
             print(fortran_double(self.gamma_bulk), '! bulk Lorentz factor', file=f)
             print(fortran_double(self.theta_obs), '! viewing angle', file=f)
             print(fortran_double(self.B), '! magnetic field', file=f)
+            print(fortran_double(self.b_index), '! magnetic field decay index', file=f)
             print(fortran_double(self.theta_e), '! electrons temperature', file=f)
             print(fortran_double(self.dtacc), '! injection period',  file=f)
             print(fortran_double(self.tstep), '! time step factor', file=f)
             print(fortran_double(self.tmax), '! maximum time', file=f)
-            print(fortran_double(self.n0), '! num. dens. of particles injected', file=f)
+            print(fortran_double(self.Q0), '! num. dens. of particles injected', file=f)
             print(fortran_double(self.g1), '! power-law min Lorentz factor', file=f)
             print(fortran_double(self.g2), '! power-law max Lorentz factor', file=f)
             print(fortran_double(self.gmin), '! EED min Lorentz factor', file=f)
@@ -79,6 +87,8 @@ class SSCC_params(object):
             print(self.numbins, '! number of EED bins', file=f)
             print(self.numdt, '! number of time steps', file=f)
             print(self.numdf, '! number of frequencies', file=f)
+            print(self.cool_kind, '! kind of cooling', file=f)
+            print(self.time_grid, '! kind of time grid', file=f)
             print(self.file_label, '! label to identify each output', file=f)
 
     def output_file(self):

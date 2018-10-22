@@ -77,7 +77,7 @@ anu = np.zeros_like(nu)
 pl.xscale('log')
 pl.yscale('log')
 pl.xlim(1e5, 1e10)
-# pl.ylim(1e-27, 1e-22)
+pl.ylim(1e-27, 1e-6)
 for i in range(gamma.size - 1):
     for j in range(nu.size):
         anu[j] = disTab.a_mb(nu[j], Bmag, 1.0, gamma[i], gamma[i + 1], 2.5, ambtab=disTab.aRMATable)
