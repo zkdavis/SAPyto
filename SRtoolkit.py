@@ -1,5 +1,5 @@
 import numpy as np
-from astropy import constants as const
+import SAPyto.magnetobrem as mbs
 
 
 def speed(gamma):
@@ -42,26 +42,45 @@ def momentum2(gamma):
     return gamma**2 - 1.0
 
 
-def Doppler(gamma, view_angle, deg=True):
+def Doppler(gamma, mu):
     '''Doppler factor
     '''
-    if deg:
-        view_angle = np.deg2rad(view_angle)
-    return 1.0 / (gamma * (1.0 + speed(gamma) * np.cos(view_angle)))
+    return 1.0 / (gamma * (1.0 + speed(gamma) * mu))
 
 
-def nu_obs(nu, z, gamma, view_angle=0.0, deg=True):
+def nu_obs(nu, z, gamma, muobs):
     '''Compute the observed frequency for a given redshift z.
     '''
-    D = Doppler(gamma, view_angle, deg=deg)
+    D = Doppler(gamma, muobs)
     return nu * D / (1.0 + z)
 
 
-def t_obs(t, z, gamma, x=0.0, view_angle=0.0, deg=True):
+def t_obs(t, z, gamma, mu, x=0.0):
     '''From Eq. (2.58) in my thesis.
     '''
-    if deg:
-        view_angle = np.deg2rad(view_angle)
-    mu_obs = np.cos(view_angle)
-    D = Doppler(gamma, view_angle, deg=deg)
-    return (1.0 + z) * (t / D + gamma * x * (speed(gamma) - mu_obs) / const.c.cgs.value)
+    D = Doppler(gamma, mu)
+    return (1.0 + z) * ((t / D) + (gamma * x * (speed(gamma) - mu) / mbs.cLight))
+
+
+def nu_com(nu, z, gamma, mu):
+    '''Compute the comoving frequency for a given redshift z.
+    '''
+    D = Doppler(gamma, mu)
+    return nu * (1.0 + z) / D
+
+
+def t_com(t, z, gamma, mu, x=0.0):
+    '''Time in the comoving frame.
+    '''
+    D = Doppler(gamma, mu)
+    return D * ((t / (1.0 + z)) - (gamma * x * (speed(gamma) - mu) / mbs.cLight))
+
+def mu_com(mu, gamma):
+    '''Viewing angle in the comoving frame.
+    '''
+    return (mu - speed(gamma)) / (1 - speed(gamma) * mu)
+
+def mu_obs(mu, gamma):
+    '''Viewing angle in the observer frame.
+    '''
+    return (mu + speed(gamma)) / (1 + speed(gamma) * mu)

@@ -1,9 +1,116 @@
 import numpy as np
+import numpy.ma as ma
+from scipy import integrate, interpolate
+import SAPyto.magnetobrem as mbs
+import SAPyto.misc as misc
+from SAPyto.spectra import spectrum as spec
+import SAPyto.SRtoolkit as SR
+
+
+def Band_function(E_eV, Ep_eV, alpha, beta, A=1e0):
+    '''Band function as in Zhang et al., 2016, ApJ, 816, 72
+    '''
+    E0 = Ep_eV / (2.0 + alpha)
+    f = []
+    for e in E_eV:
+        if (e <= (alpha - beta) * E0):
+            f.append(np.power(e / 100e3, alpha) * np.exp(-e / E0))
+        else:
+            f.append(np.power(e / 100e3, beta) * np.exp(beta - alpha) * np.power((alpha - beta) * E0 / 100e3, alpha - beta))
+    Flux = np.asarray(f)
+    return A * Flux
+
+
+class blobZS12(object):
+    '''Emitting blob based on the model in Zacharias & Schlickeiser, 2013, ApJ, 777, 109.
+    '''
+
+    def __init__(self, Gbulk, theta, z, dL, D, R, t_obs, t_em, nus):
+        self.Gbulk = Gbulk
+        self.z = z
+        self.dL = dL
+        self.Dopp = D
+        self.Radius = R
+        self.mu = np.cos(np.deg2rad(theta))
+        try:
+            self.numt_obs = len(t_obs)
+            self.t_obs = t_obs
+        except TypeError:
+            self.numt_obs = 1
+            self.t_obs = [t_obs]
+        try:
+            self.numt_em = len(t_em)
+            self.t_em = t_em
+        except TypeError:
+            self.numt_em = 1
+            self.t_em = [t_em]
+        try:
+            self.numf = len(nus)
+            self.nus = nus
+        except TypeError:
+            self.numf = 1
+            self.nus = [nus]
+        print("-->  Blob set up")
+
+    def integrando_v(self, ll, l0, tt, It):
+        res = np.zeros_like(ll)
+        for i in range(res.size):
+            te = self.Dopp * ((tt / (1.0 + self.z)) + (self.Gbulk * ll[i] * l0 * (self.mu - SR.speed(self.Gbulk))))
+            # te = tt - ll[i] * l0
+            if te < 0.0:
+                res[i] = 0.0
+            else:
+                res[i] = self.pwl_interp(te, self.t_em, It) * (ll[i] - ll[i]**2)
+        return res
+
+    def integrando_s(self, ll, l0, tt, It):
+        te = self.Dopp * ((tt / (1.0 + self.z)) + (self.Gbulk * ll * l0 * (self.mu - SR.speed(self.Gbulk))))
+        # te = tt - ll * l0
+        if te < 0.0:
+            res = 0.0
+        else:
+            res = self.pwl_interp(te, self.t_em, It) * (ll - ll**2)
+        return res
+
+    def Inu_tot(self, Inut, wSimps=False):
+        print("-->  Computing the received Intensity\n")
+        print("---------------------------")
+        print("| Iteration |  Frequency  |")
+        print("---------------------------")
+        lam0 = 2.0 * self.Radius * self.mu / mbs.cLight
+        Itot = np.zeros((self.numt_obs, self.numf))
+        lam = np.linspace(0.0, 1.0, num=100)
+
+        for j in range(self.numf):
+            I_lc = Inut[:, j]
+            for i in range(self.numt_obs):
+                if wSimps:  # ------->>>   SIMPSON
+                    Itot[i, j] = 6.0 * integrate.simps(self.integrando_v(lam, lam0, self.t_obs[i], I_lc), x=lam)
+                else:  # ------->>>   TRAPEZOIDAL
+                    Itot[i, j] = 6.0 * integrate.trapz(self.integrando_v(lam, lam0, self.t_obs[i], I_lc), x=lam)
+            if np.mod(j + 1, 32) == 0.0:
+                print("| {0:>9d} | {1:>11.3E} |".format(j, self.nus[j]))
+        print("---------------------------")
+        return Itot
+
+    def pwl_interp(self, t_in, times, Ilc):
+        '''This function returns a power-law interpolation
+        '''
+        t_pos, t = misc.find_nearest(times, t_in)
+        if t > t_in:
+            t_pos += 1
+        if t_pos >= len(times) - 1:
+            t_pos = len(times) - 3
+        if (Ilc[t_pos] > 1e-100) & (Ilc[t_pos + 1] > 1e-100):
+            s = np.log(Ilc[t_pos + 1] / Ilc[t_pos]) / np.log(times[t_pos + 1] / times[t_pos])
+            res = Ilc[t_pos] * (t_in / times[t_pos])**s
+        else:
+            res = 0.0
+        return res
 
 
 class SPN98(object):
-    '''Following This is the setup for the model in Sari, Piran & Narayan, 1998,
-    ApJ, 497, L17.
+    '''Following This is the setup for the model in Sari, Piran & Narayan, 1998, ApJ, 497, L17.
     '''
 
     def __init__(self, **kwargs):

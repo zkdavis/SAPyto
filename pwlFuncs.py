@@ -49,7 +49,9 @@ class PwlInteg:
                       /
                       1
         '''
-        def e(a, s): return np.log(a)**3 * (s - 1.0)**2 / 6.0
+        def e(a, s):
+            return np.log(a)**3 * (s - 1.0)**2 / 6.0
+
         return np.piecewise(a, [e(a, s) > eps, e(a, s) <= eps],
                             [lambda a: (1.0 - a**(1.0 - s)) / (s - 1.0),
                              lambda a: np.log(a)

@@ -10,6 +10,8 @@ import SAPyto.pwlFuncs as pwlf
 
 halfpi = 0.5 * np.pi
 twopi = 2.0 * np.pi
+lzero = np.log(1e-200)
+# Physical constants in CGS
 cLight = const.c.cgs.value
 eCharge = const.e.gauss.value
 hPlanck = const.h.cgs.value
@@ -21,7 +23,6 @@ jmbConst = twopi * eCharge**2 / cLight
 ambConst = np.pi * eCharge**2 / (me * cLight)
 chunche_c100g100 = 2.2619939050180366385e-6
 chunche_c100g20 = 2.1157699720918349273e-1
-lzero = np.log(1e-200)
 
 
 class mbs:
@@ -243,7 +244,9 @@ class spTable(object):
 #  #    # # #    #    #    #    # #    # #      #
 #  #####  #  ####     #    #    # #####  ###### ######
 class disTable(object):
-
+    #
+    #    DEBUG: This needs debugging... I think
+    #
     def __init__(self, tabname='disTable.h5', absor=True, RMA=False):
         self.Nx, self.Ng, self.Nq = extr.hdf5ExtractScalar(tabname, ['num_chi', 'num_gam', 'num_q'], group='Params')
         self.globGmin, self.globGmax = extr.hdf5ExtractScalar(tabname, ['g_min', 'g_max'], group='Params')
