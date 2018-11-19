@@ -193,10 +193,13 @@ class Paramo(object):
 
         return outf + '-' + self.flabel + '.jp.h5', argv
 
-    def run_Paramo(self):
+    def run_Paramo(self, pream=None):
         self.comp.compile()
         self.outfile, self.argv = self.output_file()
-        run_cmd = '{0}xParamo {1}{2} {3}'.format(self.comp.compile_dir, self.par.params_file, self.argv, self.outfile)
+        if pream is None:
+            run_cmd = '{0}xParamo {1}{2} {3}'.format(self.comp.compile_dir, self.par.params_file, self.argv, self.outfile)
+        else:
+            run_cmd = '{0} {1}xParamo {2}{3} {4}'.format(pream, self.comp.compile_dir, self.par.params_file, self.argv, self.outfile)
         print("\n--> Running:\n  ", run_cmd, "\n")
         os.system(run_cmd)
         print("\n--> Paramo finished")
