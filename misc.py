@@ -1,5 +1,4 @@
 import numpy as np
-from scipy.special import hyp1f1, hyperu
 
 
 def exp10(decimal):
@@ -77,6 +76,7 @@ def whittM(k, m, z):
     """Evaluates the Whitaker function M(k, m, z) as defined in Abramowitz &
     Stegun, Section 13.1.
     """
+    from scipy.special import hyp1f1
     if k is int or m is int:
         return np.exp(-0.5 * z) * np.power(z, 0.5 + float(m)) * hyp1f1(0.5 + float(m - k), 1 + 2 * m, z)
     elif k is int and m is int:
@@ -89,6 +89,7 @@ def whittW(k, m, z):
     """Evaluates the Whitaker function W(k, m, z) as defined in Abramowitz &
     Stegun, Section 13.1.
     """
+    from scipy.special import hyperu
     if k is int or m is int:
         return np.exp(-0.5 * z) * np.power(z, 0.5 + float(m)) * hyperu(0.5 + float(m - k), 1 + 2 * m, z)
     elif k is int and m is int:

@@ -64,7 +64,6 @@ def sec2dy(time):
 #   #   #     #           #    # #    # #    #   #
 #  ###   ##   #            ####  #####   ####  ##
 #                 #######
-#
 def Itobs(t, nu, jnut, sen_lum, R, muc, Gbulk, muo, z, D):
     pwl = pwlf.PwlInteg()
     Itobs = np.zeros_like(jnut)
