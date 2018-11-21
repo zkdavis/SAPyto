@@ -161,20 +161,20 @@ class runSSCC(object):
         if self.par.MBS:
             make += ' MBS=1'
 
-        os.chdir(self.par.ISdir)
+        os.chdir(self.par.exec_dir)
         print("--> Running Makefile:\n   ", make, "\n")
         os.system(make)
         os.chdir(self.cwd)
         print("\n--> Compilation successful\n")
 
     def runNewSSCC(self):
-        run_cmd = '{0}/NewSSCC {1}{2}'.format(self.par.ISdir, self.par.params_file, self.argv)
+        run_cmd = '{0}/NewSSCC {1}{2}'.format(self.par.exec_dir, self.par.params_file, self.argv)
         print("\n--> Running:\n  ", run_cmd, "\n")
         os.system(run_cmd)
         print("\n--> NewSSCC ran successfully")
 
     def cleanup(self):
-        os.chdir(self.par.ISdir)
+        os.chdir(self.par.exec_dir)
         os.system("make clean")
         os.chdir(self.cwd)
 
