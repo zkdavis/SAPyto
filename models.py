@@ -1,7 +1,8 @@
 import numpy as np
 import numpy.ma as ma
 from scipy import integrate, interpolate
-import SAPyto.magnetobrem as mbs
+# import SAPyto.magnetobrem as mbs
+import constants as C
 import SAPyto.misc as misc
 from SAPyto.spectra import spectrum as spec
 import SAPyto.SRtoolkit as SR
@@ -77,7 +78,7 @@ class blobZS12(object):
         print("---------------------------")
         print("| Iteration |  Frequency  |")
         print("---------------------------")
-        lam0 = 2.0 * self.Radius * self.mu / mbs.cLight
+        lam0 = 2.0 * self.Radius * self.mu / C.cLight
         Itot = np.zeros((self.numt_obs, self.numf))
         lam = np.linspace(0.0, 1.0, num=100)
 

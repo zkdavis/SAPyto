@@ -1,35 +1,18 @@
 import scipy.special as scisp
 import numpy as np
 import scipy.integrate as integrate
-from astropy import constants as const
 import extractor.fromHDF5 as extr
 from SAPyto import misc
 import SAPyto.SRtoolkit as SR
 import SAPyto.pwlFuncs as pwlf
-
-
-halfpi = 0.5 * np.pi
-twopi = 2.0 * np.pi
-lzero = np.log(1e-200)
-# Physical constants in CGS
-cLight = const.c.cgs.value
-eCharge = const.e.gauss.value
-hPlanck = const.h.cgs.value
-me = const.m_e.cgs.value
-mp = const.m_p.cgs.value
-sigmaT = const.sigma_T.cgs.value
-nuConst = eCharge / (twopi * me * cLight)
-jmbConst = twopi * eCharge**2 / cLight
-ambConst = np.pi * eCharge**2 / (me * cLight)
-chunche_c100g100 = 2.2619939050180366385e-6
-chunche_c100g20 = 2.1157699720918349273e-1
+import SAPyto.constants as C
 
 
 class mbs:
 
     def __init__(self, **kwargs):
         self.Zq = 1.0
-        self.mq = me
+        self.mq = C.me
         self.__dict__.update(kwargs)
 
     def nu_g(self, B):
@@ -37,13 +20,13 @@ class mbs:
               nu_g = Z e B / (2 pi m_q c)
         Dafault values: Z = 1.0, m_q = m_e
         '''
-        return eCharge * self.Zq * B / (twopi * self.mq * cLight)
+        return C.eCharge * self.Zq * B / (C.twopi * self.mq * C.cLight)
 
     def nu_B(self, B, g):
         '''Gyrofrequency'''
-        return eCharge * self.Zq * B / (twopi * g * self.mq * cLight)
+        return C.eCharge * self.Zq * B / (C.twopi * g * self.mq * C.cLight)
 
-    def nu_c(self, B, g, alpha=halfpi):
+    def nu_c(self, B, g, alpha=C.alfpi):
         '''Synchrotron critical frequency'''
         return 1.5 * self.nu_g(B) * np.sin(alpha) * g**2
 
@@ -61,7 +44,7 @@ class mbs:
 
             P = (4 / 3) sigma_T c beta^2 gamma^2 (B^2 / 8 pi)
         '''
-        return 4.0 * sigmaT * cLight * SR.speed2(gamma) * gamma**2 * B**2 / (24.0 * np.pi)
+        return 4.0 * C.sigmaT * C.cLight * SR.speed2(gamma) * gamma**2 * B**2 / (24.0 * np.pi)
 
     def Fsync(self, Xc, asym_low=False, asym_high=False):
         '''Synchrotron function'''
@@ -205,14 +188,14 @@ class spTable(object):
         u1 = 1.0 - u
 
         if (lg < self.log_xi_min[i]) | (lg < self.log_xi_min[i + 1]):
-            em = lzero
+            em = C.lzero
         else:
             coefs = self.RPcoefs[i * self.Ng:(i + 1) * self.Ng]
             val = misc.chebev(lg, coefs, self.log_xi_min[i + 1], 0.0)
             coefs = self.RPcoefs[(i - 1) * self.Ng:i * self.Ng]
             valp = misc.chebev(lg, coefs, self.log_xi_min[i], 0.0)
             em = u1 * valp + u * val
-        return np.maximum(lzero, em)
+        return np.maximum(C.lzero, em)
 
         #
         # if lg < self.log_xi_min[i]:
@@ -305,7 +288,7 @@ class disTable(object):
             chtab = self.jTable
 
         if (lx < self.log_xi_min[i]) | (lx < self.log_xi_min[i + 1]):
-            emiss = lzero
+            emiss = C.lzero
         else:
             coefs = chtab[(j + i * self.Nq) * self.Ng:(1 + j + i * self.Nq) * self.Ng]
             valij = misc.chebev(lx, coefs, self.log_xi_min[i + 1], 0.0)
@@ -316,7 +299,7 @@ class disTable(object):
             coefs = chtab[(j + (i - 1) * self.Nq) * self.Ng:(1 + j + (i - 1) * self.Nq) * self.Ng]
             valipj = misc.chebev(lx, coefs, self.log_xi_min[i + 1], 0.0)
             emiss = u1 * v1 * valipjp + u * v1 * valijp + u1 * v * valipj + u * v * valij
-        return np.maximum(lzero, emiss)
+        return np.maximum(C.lzero, emiss)
 
     #
     #  ###### #    # #  ####   ####  # #    # # ##### #   #
@@ -337,8 +320,8 @@ class disTable(object):
 
         lf = pwlf.logFuncs()
 
-        jmbc = 0.125 * jmbConst
-        nuB = nuConst * B
+        jmbc = 0.125 * C.jmbConst
+        nuB = C.nuConst * B
         chi = nu / nuB
         lchi = np.log(chi)
         lxi_min = np.log(gmin / self.globGmax)
@@ -364,7 +347,7 @@ class disTable(object):
         I3rel = np.abs(I3diff) / np.abs(I3min)
 
         if (I3rel < 1e-3) | (I3diff < 0.0):
-            I2 = chunche_c100g20 * integrate.romberg(f, gmin, gmax, args=(chi, qind), divmax=12)
+            I2 = C.chunche_c100g20 * integrate.romberg(f, gmin, gmax, args=(chi, qind), divmax=12)
         else:
             if 0.5 * lf.log2(self.globGmax, 1e-6) * (qind - 1.0)**2 < 1e-3:
                 I2 = (1.0 - lf.log1(self.globGmax, 1e-9) * (qind - 1.0)) * I3diff
@@ -391,8 +374,8 @@ class disTable(object):
             return g**(-q) * MBS.RMAfit(Xc, g) * (q + 1.0 + (g**2 / (g**2 - 1.0)))
         lf = pwlf.logFuncs()
 
-        ambc = 3.90625e-3 * ambConst
-        nuB = nuConst * B
+        ambc = 3.90625e-3 * C.ambConst
+        nuB = C.nuConst * B
         chi = nu / nuB
         lchi = np.log(chi)
         lxi_min = np.log(gmin / self.globGmax)

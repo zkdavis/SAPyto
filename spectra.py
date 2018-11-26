@@ -3,8 +3,8 @@ import numpy.ma as ma
 import scipy.integrate as sci_integ
 import SAPyto.misc as misc
 import SAPyto.pwlFuncs as pwlf
-import SAPyto.magnetobrem as mbs
 import SAPyto.SRtoolkit as srtool
+import SAPyto.constants as C
 
 
 def conv2Jy(flux):
@@ -28,13 +28,25 @@ def eV2Hz(nu):
 def Hz2m(nu):
     '''Convert frequency in hertz to wavelength in meters
     '''
-    return mbs.cLight * 1e-2 / nu
+    return C.cLight * 1e-2 / nu
 
 
 def m2Hz(lamb):
     '''Convert frequency in hertz to wavelength in meters
     '''
-    return mbs.cLight * 1e-2 / lamb
+    return C.cLight * 1e-2 / lamb
+
+
+def sec2dy(time):
+    '''Convert time in seconds to days
+    '''
+    return time / 8.64e4
+
+
+def dy2sec(time):
+    '''Convert time in days to seconds
+    '''
+    return time * 86400.0
 
 
 def specEnergyFlux(Inu, dL, z, D, R):
@@ -47,12 +59,6 @@ def EnergyFlux(nuInu, dL, D, R):
     '''Calculates the energy flux of a sphere.
     '''
     return 2.0 * np.pi * R**2 * nuInu * D**4 / dL**2
-
-
-def sec2dy(time):
-    '''Convert time in seconds to days
-    '''
-    return time / 8.64e4
 
 
 #
@@ -80,8 +86,8 @@ def Itobs(t, nu, jnut, sen_lum, R, muc, Gbulk, muo, z, D):
                 i_start = i - i_edge
 
             for ii in range(i_start, i):
-                tob_min = srtool.t_com(t[i], z, Gbulk, muo, x=t[ii - 1] * mbs.cLight * muc)
-                tob_max = srtool.t_com(t[i], z, Gbulk, muo, x=t[ii] * mbs.cLight * muc)
+                tob_min = srtool.t_com(t[i], z, Gbulk, muo, x=t[ii - 1] * C.cLight * muc)
+                tob_max = srtool.t_com(t[i], z, Gbulk, muo, x=t[ii] * C.cLight * muc)
 
                 if ii == 0:
                     Itobs[i, j] = np.abs(tob_max - tob_min) * jnut[0, j]
@@ -95,15 +101,14 @@ def Itobs(t, nu, jnut, sen_lum, R, muc, Gbulk, muo, z, D):
                         Itobs[i, j] = Itobs[i, j] + jnut[ii - 1, j] * tob_min * pwl.P(tob_max / tob_min, sind, 1e-6) / (Gbulk * muc * (muo - srtool.speed(Gbulk)) * D)
     return Itobs
 
-    #
-    #  #      #  ####  #    # #####  ####  #    # #####  #    # ######  ####
-    #  #      # #    # #    #   #   #    # #    # #    # #    # #      #
-    #  #      # #      ######   #   #      #    # #    # #    # #####   ####
-    #  #      # #  ### #    #   #   #      #    # #####  #    # #           #
-    #  #      # #    # #    #   #   #    # #    # #   #   #  #  #      #    #
-    #  ###### #  ####  #    #   #    ####   ####  #    #   ##   ######  ####
 
-
+#
+#  #      #  ####  #    # #####  ####  #    # #####  #    # ######  ####
+#  #      # #    # #    #   #   #    # #    # #    # #    # #      #
+#  #      # #      ######   #   #      #    # #    # #    # #####   ####
+#  #      # #  ### #    #   #   #      #    # #####  #    # #           #
+#  #      # #    # #    #   #   #    # #    # #   #   #  #  #      #    #
+#  ###### #  ####  #    #   #    ####   ####  #    #   ##   ######  ####
 class LightCurves:
     def __init__(self):
         pass
@@ -144,10 +149,10 @@ class LightCurves:
         '''
         licur = np.zeros_like(t)
         if nu_min < freqs[0]:
-            print('nu_min =', nu_min, '\nminimum frequency in array =', freqs[0])
+            print("nu_min =", nu_min, "\nminimum frequency in array =", freqs[0])
             return licur
         if nu_max > freqs[-1]:
-            print('nu_max =', nu_max, '\nmaximum frequency in array=', freqs[-1])
+            print("nu_max =", nu_max, "\nmaximum frequency in array=", freqs[-1])
             return licur
 
         if nu_max == nu_min:
@@ -209,14 +214,14 @@ class spectrum:
         '''
 
         if t_min < times[0]:
-            print('t_min =', t_min, '\nminimum time in array =', times[0])
+            print("t_min =", t_min, "\nminimum time in array=", times[0])
             if ret_tmasked:
                 return np.zeros_like(nu), times
             else:
                 return np.zeros_like(nu)
 
         if t_max > times[-1]:
-            print('t_max =', t_max, '\nmaximum time in array=', times[-1])
+            print("t_max =", t_max, "\nmaximum time in array=", times[-1])
             if ret_tmasked:
                 return np.zeros_like(nu), times
             else:

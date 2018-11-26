@@ -1,5 +1,5 @@
 import numpy as np
-import SAPyto.magnetobrem as mbs
+import SAPyto.constants as C
 
 
 def speed(gamma):
@@ -59,7 +59,7 @@ def t_obs(t, z, gamma, mu, x=0.0):
     '''From Eq. (2.58) in my thesis.
     '''
     D = Doppler(gamma, mu)
-    return (1.0 + z) * ((t / D) + (gamma * x * (speed(gamma) - mu) / mbs.cLight))
+    return (1.0 + z) * ((t / D) + (gamma * x * (speed(gamma) - mu) / C.cLight))
 
 
 def nu_com(nu, z, gamma, mu):
@@ -73,12 +73,14 @@ def t_com(t, z, gamma, mu, x=0.0):
     '''Time in the comoving frame.
     '''
     D = Doppler(gamma, mu)
-    return D * ((t / (1.0 + z)) - (gamma * x * (speed(gamma) - mu) / mbs.cLight))
+    return D * ((t / (1.0 + z)) - (gamma * x * (speed(gamma) - mu) / C.cLight))
+
 
 def mu_com(mu, gamma):
     '''Viewing angle in the comoving frame.
     '''
     return (mu - speed(gamma)) / (1 - speed(gamma) * mu)
+
 
 def mu_obs(mu, gamma):
     '''Viewing angle in the observer frame.
