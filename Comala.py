@@ -94,6 +94,7 @@ class compiler(object):
         self.arch = ''           # compile with specific arch flag
         self.OMP = False         # compile with OpenMP
         self.DBG = False         # compile for debugging
+        self.FBAR = False        # Progress bar
         self.rules = 'all'       # rule to compile
         self.compile_dir = './'  # address to Paramo, must end with '/'
 
@@ -120,6 +121,9 @@ class compiler(object):
 
         if self.MBS:
             make += ' MBS=1'
+
+        if self.FBAR:
+            make += ' FBAR=1'
 
         os.chdir(self.compile_dir)
         print("--> Running Makefile:\n   ", make, "\n")
@@ -213,9 +217,12 @@ class ITobs(object):
         self.Pfile = paramo_file
         self.cwd = os.getcwd()
 
-    def run_ITobs(self):
+    def run_ITobs(self, pream=None):
         self.comp.compile()
-        run_cmd = '{0}xITobs {1}'.format(self.comp.compile_dir, self.Pfile)
+        if pream is None:
+            run_cmd = '{0}xITobs {1}'.format(self.comp.compile_dir, self.Pfile)
+        else:
+            run_cmd = '{0} {1}xITobs {2}'.format(pream, self.comp.compile_dir, self.Pfile)
         print("\n--> Running:\n  ", run_cmd, "\n")
         os.system(run_cmd)
         print("\n--> Paramo finished")
