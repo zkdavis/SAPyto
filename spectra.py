@@ -61,6 +61,18 @@ def EnergyFlux(nuInu, dL, D, R):
     return 2.0 * np.pi * R**2 * nuInu * D**4 / dL**2
 
 
+def pc2cm(distance):
+    '''Convert distance from parsecs to centimeters
+    '''
+    return distance * 3.08567758149137e18
+
+
+def cm2pc(distance):
+    '''Convert distance from centimeters to parsecs
+    '''
+    return distance / 3.08567758149137e18
+
+
 #
 #  ###   ##                                    ##
 #   #   #   #####          ####  #####   ####    #
@@ -70,6 +82,8 @@ def EnergyFlux(nuInu, dL, D, R):
 #   #   #     #           #    # #    # #    #   #
 #  ###   ##   #            ####  #####   ####  ##
 #                 #######
+
+
 def Itobs(t, nu, jnut, sen_lum, R, muc, Gbulk, muo, z, D):
     pwl = pwlf.PwlInteg()
     Itobs = np.zeros_like(jnut)
