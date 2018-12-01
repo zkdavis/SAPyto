@@ -1,10 +1,10 @@
 import numpy as np
-import numpy.ma as ma
-from scipy import integrate, interpolate
+# import numpy.ma as ma
+from scipy import integrate  # , interpolate
 # import SAPyto.magnetobrem as mbs
-import constants as C
+import SAPyto.constants as C
 import SAPyto.misc as misc
-from SAPyto.spectra import spectrum as spec
+# from SAPyto.spectra import spectrum as spec
 import SAPyto.SRtoolkit as SR
 
 

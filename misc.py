@@ -9,7 +9,7 @@ def exp10(decimal):
     return int(parts[-1])
 
 
-def fortran_double(number):
+def fortran_double(number, dble=True):
     '''Function that returns a floating point (as a string) in the FORTRAN
     notation
     '''
@@ -36,24 +36,27 @@ def fortran_double(number):
             ee = ee[1:]
     if (len(ee) == 0):
         ee = '0'
-    return "{0}d{1}".format(ss, ee)
-
-
-def sci_notation(n, prec=3, fortran=False):
-    """Represent n in scientific notation, with the specified precision.
-    >>> sci_notation(1234 * 10**1000)
-    '1.234e+1003'
-    >>> sci_notation(10**1000 // 2, prec=1)
-    '5.0e+999'
-    """
-    exponent = int(np.log10(n))
-    if (n < 1):
-        exponent -= 1
-    mantissa = n / np.power(10, exponent)
-    if fortran:
-        return "{0:.{1}f}d{2:+d}".format(mantissa, prec, exponent)
+    if dble:
+        return "{0}d{1}".format(ss, ee)
     else:
-        return "{0:.{1}f}e{2:+d}".format(mantissa, prec, exponent)
+        return "{0}e{1}".format(ss, ee)
+
+
+# def sci_notation(n, prec=3, fortran=False):
+#     """Represent n in scientific notation, with the specified precision.
+#     >>> sci_notation(1234 * 10**1000)
+#     '1.234e+1003'
+#     >>> sci_notation(10**1000 // 2, prec=1)
+#     '5.0e+999'
+#     """
+#     exponent = int(np.log10(n))
+#     if (n < 1):
+#         exponent -= 1
+#     mantissa = n / np.power(10, exponent)
+#     if fortran:
+#         return "{0:.{1}f}d{2:+d}".format(mantissa, prec, exponent)
+#     else:
+#         return "{0:.{1}f}e{2:+d}".format(mantissa, prec, exponent)
 
 
 def find_nearest(arr, val):

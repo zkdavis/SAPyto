@@ -45,7 +45,7 @@ def momentum2(gamma):
 def Doppler(gamma, mu):
     '''Doppler factor
     '''
-    return 1.0 / (gamma * (1.0 + speed(gamma) * mu))
+    return 1.0 / (gamma * (1.0 - speed(gamma) * mu))
 
 
 def nu_obs(nu, z, gamma, muobs):
