@@ -26,7 +26,7 @@ class mbs:
         '''Gyrofrequency'''
         return C.eCharge * self.Zq * B / (C.twopi * g * self.mq * C.cLight)
 
-    def nu_c(self, B, g, alpha=C.alfpi):
+    def nu_c(self, B, g, alpha=C.halfpi):
         '''Synchrotron critical frequency'''
         return 1.5 * self.nu_g(B) * np.sin(alpha) * g**2
 
@@ -38,7 +38,7 @@ class mbs:
         '''Harmonic frequency'''
         return nu / self.nu_g(B)
 
-    def Psyn_iso(gamma, B):
+    def Psyn_iso(self, gamma, B):
         '''Total synchrotron radiated power for an isotropic distribution of
         velocities. Formula given in Rybicki & Lightman (1985), eq. (6.7b):
 
@@ -112,7 +112,10 @@ class mbs:
     #  #    #  #     # #     #
     #  #     # #     # #     #
     def RMAfit(self, Xc, g):
-        '''Fit by Rueda-Becerril (2017)'''
+        '''Fit by Rueda-Becerril (2017)
+
+        RMAfit(x) = Rsync(x) = 0.5 pi x CS(x)
+        '''
         # xg3 = Xc * g**3
 
         def A(x):
@@ -140,7 +143,7 @@ class mbs:
                                  (x >= c1) & (x <= c2),
                                  (x > c2) & (x < c3),
                                  x >= c3],
-                                [lambda x:self.Rsync(x, asym_low=True),
+                                [lambda x: self.Rsync(x, asym_low=True),
                                  lambda x: A(x),
                                  lambda x: B(x),
                                  lambda x: self.Rsync(x, asym_high=True)])

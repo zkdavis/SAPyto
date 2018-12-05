@@ -49,18 +49,6 @@ def dy2sec(time):
     return time * 86400.0
 
 
-def specEnergyFlux(Inu, dL, z, D, R):
-    '''Calculates the spectral energy flux of a sphere.
-    '''
-    return 2.0 * np.pi * R**2 * Inu * D**3 * (1.0 + z) / dL**2
-
-
-def EnergyFlux(nuInu, dL, D, R):
-    '''Calculates the energy flux of a sphere.
-    '''
-    return 2.0 * np.pi * R**2 * nuInu * D**4 / dL**2
-
-
 def pc2cm(distance):
     '''Convert distance from parsecs to centimeters
     '''
@@ -71,6 +59,18 @@ def cm2pc(distance):
     '''Convert distance from centimeters to parsecs
     '''
     return distance / 3.08567758149137e18
+
+
+def specEnergyFlux(Inu, dL, z, D, R):
+    '''Calculates the spectral energy flux of a sphere.
+    '''
+    return 2.0 * np.pi * R**2 * Inu * D**3 * (1.0 + z) / dL**2
+
+
+def EnergyFlux(nuInu, dL, D, R):
+    '''Calculates the energy flux of a sphere.
+    '''
+    return 2.0 * np.pi * R**2 * nuInu * D**4 / dL**2
 
 
 #
