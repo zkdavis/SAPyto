@@ -82,8 +82,6 @@ def EnergyFlux(nuInu, dL, D, R):
 #   #   #     #           #    # #    # #    #   #
 #  ###   ##   #            ####  #####   ####  ##
 #                 #######
-
-
 def Itobs(t, nu, jnut, sen_lum, R, muc, Gbulk, muo, z, D):
     pwl = pwlf.PwlInteg()
     Itobs = np.zeros_like(jnut)
@@ -171,8 +169,7 @@ class LightCurves:
 
         if nu_max == nu_min:
             for i in range(t.size):
-                # licur[i] = np.interp(nu_max, freqs, flux[i, :])
-                licur[i] = np.interp(np.log(nu_max), np.log(freqs), flux[i, :])
+                licur[i] = np.exp(np.interp(np.log(nu_max), np.log(freqs), np.log(flux[i, :], where=(flux[i, :] != 0.0))))
         else:
             nu_mskd = ma.masked_outside(freqs, nu_min, nu_max)
             nus = nu_mskd.compressed()
@@ -253,9 +250,7 @@ class spectrum:
 
         for j in range(nu.size):
             if t_max == t_min:
-                # spec[j] = np.interp(t_max, times, flux[:, j])
-                spec[j] = np.exp(np.interp(np.log(t_max), np.log(times), np.log(flux[:, j])))
-                # tt = np.asarray([t_max])
+                spec[j] = np.exp(np.interp(np.log(t_max), np.log(times), np.log(flux[:, j], where=(flux[:, j] != 0.0))))
             else:
                 spec[j] = sci_integ.simps(tt * Fnu[:, j], x=np.log(tt))
 
