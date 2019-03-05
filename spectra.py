@@ -49,6 +49,18 @@ def dy2sec(time):
     return time * 86400.0
 
 
+def sec2hr(time):
+    '''Convert time in seconds to hours
+    '''
+    return time / 3600.0
+
+
+def hr2sec(time):
+    '''Convert time in hours to seconds
+    '''
+    return time * 3600.0
+
+
 def pc2cm(distance):
     '''Convert distance from parsecs to centimeters
     '''
@@ -64,13 +76,13 @@ def cm2pc(distance):
 def specEnergyFlux(Inu, dL, z, D, R):
     '''Calculates the spectral energy flux of a sphere.
     '''
-    return 2.0 * np.pi * R**2 * Inu * D**3 * (1.0 + z) / dL**2
+    return 4.0 * np.pi * R**2 * Inu * D**3 * (1.0 + z) / (3.0 * dL**2)
 
 
 def EnergyFlux(nuInu, dL, D, R):
     '''Calculates the energy flux of a sphere.
     '''
-    return 2.0 * np.pi * R**2 * nuInu * D**4 / dL**2
+    return 4.0 * np.pi * R**2 * nuInu * D**4 / (3.0 * dL**2)
 
 
 #
@@ -130,8 +142,8 @@ class LightCurves:
         the frequency given: nu_in.
         '''
         nu_pos, nu = misc.find_nearest(nus, nu_in)
-        print("Nearest frequency: {0} Hz".format(misc.sci_notation(nu)))
-        return flux[:, nu_pos] / nu[nu_pos]
+        print("Nearest frequency: {0} Hz".format(misc.fortran_double(nu, dble=False)))
+        return flux[:, nu_pos]
 
     def pwl_interp(self, nu_in, t, nus, flux):
         '''This function returns a power-law interpolated light curve
@@ -209,8 +221,7 @@ class spectrum:
         if times[t_pos] >= times[-1]:
             t_pos -= 1
         spec = np.zeros_like(nu)
-        numf = nu.size
-        for j in range(numf):
+        for j in range(nu.size):
             if (flux[t_pos, j] > 1e-100) & (flux[t_pos + 1, j] > 1e-100):
                 s = -np.log(flux[t_pos + 1, j] / flux[t_pos, j]) / np.log(times[t_pos + 1] / times[t_pos])
                 if s > 8.0:
@@ -224,19 +235,30 @@ class spectrum:
         '''This function returns the integrated spectrum during the period[t_min, t_max]
         '''
 
-        if t_min < times[0]:
-            print("t_min =", t_min, "\nminimum time in array=", times[0])
+        if t_max < times[0]:
+            print("Input t_max: ", t_max, "\nMinimum time in array:", times[0])
+            if ret_tmasked:
+                return np.zeros_like(nu), times
+            else:
+                return np.zeros_like(nu)
+        if t_min > times[-1]:
+            print("Input t_min: ", t_min, "\nMaximum time in array:", times[-1])
             if ret_tmasked:
                 return np.zeros_like(nu), times
             else:
                 return np.zeros_like(nu)
 
+        if t_min < times[0]:
+            t_min = times[0]
+            print("Input t_min: ", t_min, "\nMinimum time in array:", times[0])
         if t_max > times[-1]:
-            print("t_max =", t_max, "\nmaximum time in array=", times[-1])
-            if ret_tmasked:
-                return np.zeros_like(nu), times
-            else:
-                return np.zeros_like(nu)
+            t_max = times[-1]
+            print("Input t_max: ", t_max, "\nMaximum time in array:", times[-1])
+
+        if t_max == t_min:
+            return self.pwl_interp(t_min, nu, times, flux)
+
+        spec = np.zeros_like(nu)
 
         if (t_min == times[0]) & (t_max == times[-1]):
             tt = times
@@ -246,13 +268,9 @@ class spectrum:
             tt = t_mskd.compressed()
             Fnu = flux[~t_mskd.mask, :]
 
-        spec = np.zeros_like(nu)
-
         for j in range(nu.size):
-            if t_max == t_min:
-                spec[j] = np.exp(np.interp(np.log(t_max), np.log(times), np.log(flux[:, j], where=(flux[:, j] != 0.0))))
-            else:
-                spec[j] = sci_integ.simps(tt * Fnu[:, j], x=np.log(tt))
+            spec[j] = sci_integ.simps(tt * Fnu[:, j], x=np.log(tt))
+            # spec[j] = sci_integ.simps(Fnu[:, j], x=tt)
 
         if ret_tmasked:
             return spec, tt
@@ -263,11 +281,10 @@ class spectrum:
         '''This function returns the averaged spectrum over the period[t_min, t_max]
         '''
         spec, tt = self.integ(t_min, t_max, nu, times, flux, ret_tmasked=True)
-        tott = np.sum(tt[1:] - tt[:-1])
+        tott = np.sum(tt[1:] - tt[:-1]) + tt[0]
         return spec / tott
 
 
-#
 #   #####                                           ######
 #  #     #  ####  #    # #####  #####  ####  #    # #     #  ####  #    #
 #  #       #    # ##  ## #    #   #   #    # ##   # #     # #    # ##  ##

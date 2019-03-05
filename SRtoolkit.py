@@ -42,6 +42,20 @@ def momentum2(gamma):
     return gamma**2 - 1.0
 
 
+def gamma_of_p(momentum):
+    '''Calculating the Lorentz factor:
+    gamma = sqrt(p^2 + 1)
+    '''
+    return np.sqrt(momentum**2 + 1.0)
+
+
+def gamma2_of_p(momentum):
+    '''Calculating the Lorentz factor:
+    gamma^2 = p^2 + 1
+    '''
+    return momentum**2 + 1.0
+
+
 def Doppler(gamma, mu):
     '''Doppler factor
     '''
