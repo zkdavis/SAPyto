@@ -298,7 +298,7 @@ def ComptonDom(nus, Fsyn, Fic, t_min, t_max, times):
     Nf = nus.size
 
     # NOTE  synchrotron spectrum and peak
-    synint = spec.integ(t_min, t_max, Nf, times, Fsyn)
+    synint = spec.integ(t_min, t_max, nus, times, Fsyn)
     syn_pos = synint.argmax()
     syn_peak = synint[syn_pos]
     nu_syn = nus[syn_pos]
@@ -310,7 +310,7 @@ def ComptonDom(nus, Fsyn, Fic, t_min, t_max, times):
     #         syntot += synint[j] * nus[j] * pwli.P(nus[j + 1] / nus[j], s)
 
     # NOTE  IC spectrum and peak
-    ICint = spec.integ(t_min, t_max, Nf, times, Fic)
+    ICint = spec.integ(t_min, t_max, nus, times, Fic)
     IC_pos = ICint.argmax()
     IC_peak = ICint[IC_pos]
     nu_IC = nus[IC_pos]
