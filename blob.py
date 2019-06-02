@@ -54,7 +54,7 @@ def opt_depth(absor, R):
 
 
 def intensity(jnu, anu, R):
-    Inu = np.asarray(jnu)
+    Inu = np.zeros_like(jnu)
     for i in range(jnu.size):
         Inu[i] = R * jnu[i] * opt_depth(anu[i], R)
     return Inu

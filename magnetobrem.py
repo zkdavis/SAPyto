@@ -163,7 +163,7 @@ class mbs:
 #  #      #    # #      #      # # #    # #   #     #
 #  #      #    # # #    # #    # #  #  #  #   #     #
 #  ###### #    # #  ####   ####  #   ##   #   #     #
-def j_mb(self, nu, B, n0, gmin, gmax, qind):
+def j_mb(nu, g, N, B):
     '''Description:
     This function reproduces the MBS emissivity from a power-law distribution.
     '''
@@ -173,53 +173,26 @@ def j_mb(self, nu, B, n0, gmin, gmax, qind):
         Xc = 2.0 * c / (3.0 * g**2)
         return g**(1.0 - q) * MBS.RMAfit(Xc, g)
 
-    lf = pwlf.logFuncs()
-
-    calc_jnu: do k = 1, Ng - 1
-      if (nn(k) > 1d-100 .and. nn(k + 1) > 1d-100) then
-        qq = -dlog(nn(k + 1) / nn(k)) / dlog(gg(k + 1) / gg(k))
-          if (qq > 8d0) qq = 8d0
-          if (qq < -8d0) qq = -8d0
-          jnu = jnu + j_mb(freq, B, nn(k), gg(k), gg(k + 1), qq, RMA_new)
-       end if
-    end do calc_jnu
-    if (jnu < 1d-200) jnu = 0d0
-
-    jmbc = 0.125 * C.jmbConst
     nuB = C.nuConst * B
     chi = nu / nuB
-    lchi = np.log(chi)
-    lxi_min = np.log(gmin / self.globGmax)
-    lxi_max = np.log(gmax / self.globGmax)
+    jnu = np.zeros_like(nu)
 
-    if jmbtab is None:
-        jmbtab = self.jTable
+    for j in range(nu.size):
+        for k in range(g.size - 1):
+            if (N[k] > 1e-100 and N[k + 1] > 1e-100):
+                q = -np.log(N[k + 1] / N[k]) / np.log(g[k + 1] / g[k])
+                if (q > 8.):
+                    q = 8.
+                if (q < -8.):
+                    q = -8.
 
-    if lchi < self.log_chi[0]:
-        return "j_mb: input nu below table nu_min"
+                I2 = integrate.romberg(f, g[k], g[k + 1], args=(chi[j], q))
+                jnu[j] = jnu[j] + C.jmbConst * nuB * N[k] * I2 * g[k]**q
 
-    i = np.argmin(np.abs(lchi - self.log_chi))
-    if self.log_xi_min[i] >= lxi_max:
-        return 0.0
-    elif (self.log_xi_min[i] >= lxi_min) & (self.log_xi_min[i] < lxi_max):
-        I3min = np.exp(self.I3_interp(lchi, self.log_xi_min[i], qind, chtab=jmbtab))
-        I3max = np.exp(self.I3_interp(lchi, lxi_max, qind, chtab=jmbtab))
-    else:
-        I3min = np.exp(self.I3_interp(lchi, lxi_min, qind, chtab=jmbtab))
-        I3max = np.exp(self.I3_interp(lchi, lxi_max, qind, chtab=jmbtab))
+            if (jnu[j] < 1e-200):
+                jnu[j] = 0.
 
-    I3diff = I3min - I3max
-    I3rel = np.abs(I3diff) / np.abs(I3min)
-
-    if (I3rel < 1e-3) | (I3diff < 0.0):
-        I2 = C.chunche_c100g20 * integrate.romberg(f, gmin, gmax, args=(chi, qind), divmax=12)
-    else:
-        if 0.5 * lf.log2(self.globGmax, 1e-6) * (qind - 1.0)**2 < 1e-3:
-            I2 = (1.0 - lf.log1(self.globGmax, 1e-9) * (qind - 1.0)) * I3diff
-        else:
-            I2 = self.globGmax**(1.0 - qind) * I3diff
-
-    return jmbc * nuB * n0 * I2 * gmin**qind
+    return jnu
 
 
 #
@@ -229,7 +202,7 @@ def j_mb(self, nu, B, n0, gmin, gmax, qind):
 #  ###### #    #      # #    # #####  #####    #   # #    # #  # #
 #  #    # #    # #    # #    # #   #  #        #   # #    # #   ##
 #  #    # #####   ####   ####  #    # #        #   #  ####  #    #
-def a_mb(self, nu, B, n0, gmin, gmax, qind, ambtab=None):
+def a_mb(nu, g, N, B):
     '''Description:
     This function reproduces the MBS absorption from a power-law distribution.
     '''
@@ -237,44 +210,24 @@ def a_mb(self, nu, B, n0, gmin, gmax, qind, ambtab=None):
 
     def f(g, c=1.0, q=2.5):
         Xc = 2.0 * c / (3.0 * g**2)
-        return g**(-q) * MBS.RMAfit(Xc, g) * (q + 1.0 + (g**2 / (g**2 - 1.0)))
-    lf = pwlf.logFuncs()
+        return g**(1.0 - q) * MBS.RMAfit(Xc, g)
 
-    ambc = 3.90625e-3 * C.ambConst
     nuB = C.nuConst * B
     chi = nu / nuB
-    lchi = np.log(chi)
-    lxi_min = np.log(gmin / self.globGmax)
-    lxi_max = np.log(gmax / self.globGmax)
+    anu = np.zeros_like(nu)
 
-    if ambtab is None:
-        ambtab = self.aTable
+    for j in range(nu.size):
+        for k in range(g.size - 1):
+            if (N[k] > 1e-100 and N[k + 1] > 1e-100):
+                q = -np.log(N[k + 1] / N[k]) / np.log(g[k + 1] / g[k])
+                if (q > 8.):
+                    q = 8.
+                if (q < -8.):
+                    q = -8.
 
-    if lchi < self.log_chi[0]:
-        return "a_mb: input nu below table nu_min"
+                A2 = integrate.romberg(f, g[k], g[k + 1], args=(chi[j], q))
+                anu[j] = anu[j] + C.ambConst * nuB * N[k] * A2 * g[k]**q
+            if (anu[j] < 1e-200):
+                anu[j] = 0.
 
-    i = np.argmin(np.abs(lchi - self.log_chi))
-    if self.log_xi_min[i] >= lxi_max:
-        return 0.0
-    elif (self.log_xi_min[i] >= lxi_min) & (self.log_xi_min[i] < lxi_max):
-        A3min = np.exp(self.I3_interp(lchi, self.log_xi_min[i], qind, chtab=ambtab))
-        A3max = np.exp(self.I3_interp(lchi, lxi_max, qind, chtab=ambtab))
-    else:
-        A3min = np.exp(self.I3_interp(lchi, lxi_min, qind, chtab=ambtab))
-        A3max = np.exp(self.I3_interp(lchi, lxi_max, qind, chtab=ambtab))
-
-    A3diff = A3min - A3max
-    A3rel = np.abs(A3diff) / np.abs(A3min)
-
-    if (A3rel < 1e-3) | (A3diff < 0.0):
-        # A2 = 0.0
-        A2 = integrate.romberg(f, gmin, gmax, args=(chi, qind))
-    else:
-        if 0.5 * lf.log2(self.globGmax, 1e-6) * (qind - 1.0)**2 < 1e-3:
-            A2 = (1.0 - lf.log1(self.globGmax, 1e-9) * (qind - 1.0)) * A3diff
-        else:
-            A2 = self.globGmax**(1.0 - qind) * A3diff
-
-    # A2 = integrate.romberg(f, gmin, gmax, args=(chi, qind), divmax=12)
-
-    return ambc * nuB * n0 * A2 * gmin**qind / nu**2
+    return anu / nu**2
