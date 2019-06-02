@@ -1,7 +1,6 @@
 import scipy.special as scisp
 import numpy as np
 import scipy.integrate as integrate
-import extractor.fromHDF5 as extr
 from SAPyto import misc
 import SAPyto.SRtoolkit as SR
 import SAPyto.pwlFuncs as pwlf
@@ -158,260 +157,124 @@ class mbs:
 
 
 #
-#                #######
-#   ####  #####     #      ##   #####  #      ######
-#  #      #    #    #     #  #  #    # #      #
-#   ####  #    #    #    #    # #####  #      #####
-#       # #####     #    ###### #    # #      #
-#  #    # #         #    #    # #    # #      #
-#   ####  #         #    #    # #####  ###### ######
-class spTable(object):
+#  ###### #    # #  ####   ####  # #    # # ##### #   #
+#  #      ##  ## # #      #      # #    # #   #    # #
+#  #####  # ## # #  ####   ####  # #    # #   #     #
+#  #      #    # #      #      # # #    # #   #     #
+#  #      #    # # #    # #    # #  #  #  #   #     #
+#  ###### #    # #  ####   ####  #   ##   #   #     #
+def j_mb(self, nu, B, n0, gmin, gmax, qind):
+    '''Description:
+    This function reproduces the MBS emissivity from a power-law distribution.
+    '''
+    MBS = mbs()
 
-    def __init__(self, tabname='spTable.h5'):
-        self.Nc = extr.hdf5ExtractScalar(tabname, 'num_chi', group='Params')
-        self.Ng = extr.hdf5ExtractScalar(tabname, 'num_gam', group='Params')
-        self.chi_min, self.chi_max = extr.hdf5ExtractScalar(tabname, ['chi_min', 'chi_max'], group='Params')
-        self.Gmin, self.Gmax = extr.hdf5ExtractScalar(tabname, ['g_min', 'g_max'], group='Params')
-        self.RPcoefs, self.log_chi, self.log_xi_min = extr.hdf5Extract1D(tabname, ['RadPow_Coefs', 'chi', 'xi_min'])
-        self.RadPower, self.log_xi, self.log_gamma = extr.hdf5Extract2D(tabname, ['RadPower', 'xi', 'gamma'])
+    def f(g, c=1.0, q=2.5):
+        Xc = 2.0 * c / (3.0 * g**2)
+        return g**(1.0 - q) * MBS.RMAfit(Xc, g)
 
-        self.dchi = 1.0 / (self.log_chi[1:] - self.log_chi[:-1])
+    lf = pwlf.logFuncs()
 
-    def I1_interp(self, chi, gamma):
-        # --->  Locating the position of lc
-        lc = np.log(chi)
-        lg = np.log(gamma / self.Gmax)
-        i = np.argmin(np.abs(lc - self.log_chi))
-        if lc < self.log_chi[i]:
-            i = np.max([0, i - 1])
-        if lc > self.log_chi[i + 1]:
-            i = np.min([self.Nc - 2, i + 1])
+    calc_jnu: do k = 1, Ng - 1
+      if (nn(k) > 1d-100 .and. nn(k + 1) > 1d-100) then
+        qq = -dlog(nn(k + 1) / nn(k)) / dlog(gg(k + 1) / gg(k))
+          if (qq > 8d0) qq = 8d0
+          if (qq < -8d0) qq = -8d0
+          jnu = jnu + j_mb(freq, B, nn(k), gg(k), gg(k + 1), qq, RMA_new)
+       end if
+    end do calc_jnu
+    if (jnu < 1d-200) jnu = 0d0
 
-        u = (lc - self.log_chi[i]) * self.dchi[i]
-        u1 = 1.0 - u
+    jmbc = 0.125 * C.jmbConst
+    nuB = C.nuConst * B
+    chi = nu / nuB
+    lchi = np.log(chi)
+    lxi_min = np.log(gmin / self.globGmax)
+    lxi_max = np.log(gmax / self.globGmax)
 
-        if (lg < self.log_xi_min[i]) | (lg < self.log_xi_min[i + 1]):
-            em = C.lzero
+    if jmbtab is None:
+        jmbtab = self.jTable
+
+    if lchi < self.log_chi[0]:
+        return "j_mb: input nu below table nu_min"
+
+    i = np.argmin(np.abs(lchi - self.log_chi))
+    if self.log_xi_min[i] >= lxi_max:
+        return 0.0
+    elif (self.log_xi_min[i] >= lxi_min) & (self.log_xi_min[i] < lxi_max):
+        I3min = np.exp(self.I3_interp(lchi, self.log_xi_min[i], qind, chtab=jmbtab))
+        I3max = np.exp(self.I3_interp(lchi, lxi_max, qind, chtab=jmbtab))
+    else:
+        I3min = np.exp(self.I3_interp(lchi, lxi_min, qind, chtab=jmbtab))
+        I3max = np.exp(self.I3_interp(lchi, lxi_max, qind, chtab=jmbtab))
+
+    I3diff = I3min - I3max
+    I3rel = np.abs(I3diff) / np.abs(I3min)
+
+    if (I3rel < 1e-3) | (I3diff < 0.0):
+        I2 = C.chunche_c100g20 * integrate.romberg(f, gmin, gmax, args=(chi, qind), divmax=12)
+    else:
+        if 0.5 * lf.log2(self.globGmax, 1e-6) * (qind - 1.0)**2 < 1e-3:
+            I2 = (1.0 - lf.log1(self.globGmax, 1e-9) * (qind - 1.0)) * I3diff
         else:
-            coefs = self.RPcoefs[i * self.Ng:(i + 1) * self.Ng]
-            val = misc.chebev(lg, coefs, self.log_xi_min[i + 1], 0.0)
-            coefs = self.RPcoefs[(i - 1) * self.Ng:i * self.Ng]
-            valp = misc.chebev(lg, coefs, self.log_xi_min[i], 0.0)
-            em = u1 * valp + u * val
-        return np.maximum(C.lzero, em)
+            I2 = self.globGmax**(1.0 - qind) * I3diff
 
-        #
-        # if lg < self.log_xi_min[i]:
-        #     if lg < self.log_xi_min[i + 1]:
-        #         return 0.0
-        #     else:
-        #         coefs = self.RPcoefs[i * self.Ng:(i + 1) * self.Ng]
-        #         val = misc.chebev(lg, coefs, self.log_xi_min[i + 1], 0.0)
-        #         return u * val
-        # else:
-        #     if lg < self.log_xi_min[i + 1]:
-        #         coefs = self.RPcoefs[(i - 1) * self.Ng:i * self.Ng]
-        #         val = misc.chebev(lg, coefs, self.log_xi_min[i], 0.0)
-        #         return u1 * val
-        #     else:
-        #         coefs = self.RPcoefs[i * self.Ng:(i + 1) * self.Ng]
-        #         val = misc.chebev(lg, coefs, self.log_xi_min[i + 1], 0.0)
-        #         coefs = self.RPcoefs[(i - 1) * self.Ng:i * self.Ng]
-        #         valp = misc.chebev(lg, coefs, self.log_xi_min[i], 0.0)
-        #         return u1 * valp + u * val
+    return jmbc * nuB * n0 * I2 * gmin**qind
 
 
 #
-#                  #######
-#  #####  #  ####     #      ##   #####  #      ######
-#  #    # # #         #     #  #  #    # #      #
-#  #    # #  ####     #    #    # #####  #      #####
-#  #    # #      #    #    ###### #    # #      #
-#  #    # # #    #    #    #    # #    # #      #
-#  #####  #  ####     #    #    # #####  ###### ######
-class disTable(object):
-    #
-    #    DEBUG: This needs debugging... I think
-    #
-    def __init__(self, tabname='disTable.h5', absor=True, RMA=False):
-        self.Nx, self.Ng, self.Nq = extr.hdf5ExtractScalar(tabname, ['num_chi', 'num_gam', 'num_q'], group='Params')
-        self.globGmin, self.globGmax = extr.hdf5ExtractScalar(tabname, ['g_min', 'g_max'], group='Params')
-        self.log_chi, self.qq, self.log_xi_min = extr.hdf5Extract1D(tabname, ['chi', 'q', 'xi_min'])
-        self.jTable = extr.hdf5Extract1D(tabname, 'disTable')
-        # --->  With absorption?
-        if absor:
-            self.aTable = extr.hdf5Extract1D(tabname, 'adisTable')
+#    ##   #####   ####   ####  #####  #####  ##### #  ####  #    #
+#   #  #  #    # #      #    # #    # #    #   #   # #    # ##   #
+#  #    # #####   ####  #    # #    # #    #   #   # #    # # #  #
+#  ###### #    #      # #    # #####  #####    #   # #    # #  # #
+#  #    # #    # #    # #    # #   #  #        #   # #    # #   ##
+#  #    # #####   ####   ####  #    # #        #   #  ####  #    #
+def a_mb(self, nu, B, n0, gmin, gmax, qind, ambtab=None):
+    '''Description:
+    This function reproduces the MBS absorption from a power-law distribution.
+    '''
+    MBS = mbs()
+
+    def f(g, c=1.0, q=2.5):
+        Xc = 2.0 * c / (3.0 * g**2)
+        return g**(-q) * MBS.RMAfit(Xc, g) * (q + 1.0 + (g**2 / (g**2 - 1.0)))
+    lf = pwlf.logFuncs()
+
+    ambc = 3.90625e-3 * C.ambConst
+    nuB = C.nuConst * B
+    chi = nu / nuB
+    lchi = np.log(chi)
+    lxi_min = np.log(gmin / self.globGmax)
+    lxi_max = np.log(gmax / self.globGmax)
+
+    if ambtab is None:
+        ambtab = self.aTable
+
+    if lchi < self.log_chi[0]:
+        return "a_mb: input nu below table nu_min"
+
+    i = np.argmin(np.abs(lchi - self.log_chi))
+    if self.log_xi_min[i] >= lxi_max:
+        return 0.0
+    elif (self.log_xi_min[i] >= lxi_min) & (self.log_xi_min[i] < lxi_max):
+        A3min = np.exp(self.I3_interp(lchi, self.log_xi_min[i], qind, chtab=ambtab))
+        A3max = np.exp(self.I3_interp(lchi, lxi_max, qind, chtab=ambtab))
+    else:
+        A3min = np.exp(self.I3_interp(lchi, lxi_min, qind, chtab=ambtab))
+        A3max = np.exp(self.I3_interp(lchi, lxi_max, qind, chtab=ambtab))
+
+    A3diff = A3min - A3max
+    A3rel = np.abs(A3diff) / np.abs(A3min)
+
+    if (A3rel < 1e-3) | (A3diff < 0.0):
+        # A2 = 0.0
+        A2 = integrate.romberg(f, gmin, gmax, args=(chi, qind))
+    else:
+        if 0.5 * lf.log2(self.globGmax, 1e-6) * (qind - 1.0)**2 < 1e-3:
+            A2 = (1.0 - lf.log1(self.globGmax, 1e-9) * (qind - 1.0)) * A3diff
         else:
-            self.aTable = None
-        # --->  With analytic table?
-        if RMA:
-            self.jRMATable = extr.hdf5Extract1D(tabname, 'RMATable')
-        else:
-            self.jRMATable = None
-        # --->  With absorption analytic table?
-        if absor and RMA:
-            self.aRMATable = extr.hdf5Extract1D(tabname, 'aRMATable')
-        else:
-            self.aRMATable = None
+            A2 = self.globGmax**(1.0 - qind) * A3diff
 
-        self.dchi = 1.0 / (self.log_chi[1:] - self.log_chi[:-1])
-        self.dq = 1.0 / (self.qq[1:] - self.qq[:-1])
+    # A2 = integrate.romberg(f, gmin, gmax, args=(chi, qind), divmax=12)
 
-    def I3_interp(self, lc, lx, q, chtab=None):
-        '''
-        Input
-            lc: log(chi)
-            lx: log(xi), where xi = gamma / globGmax
-            q : power-law index
-        Optional
-            chtab: name of table loaded
-        '''
-        #
-        # DEBUG: Make suger indices are OK
-        #
-        # --->  Locating the position of lc
-        i = np.argmin(np.abs(lc - self.log_chi))
-        if lc < self.log_chi[i]:
-            i = np.max([0, i - 1])
-        if lc > self.log_chi[i + 1]:
-            i = np.min([self.Nc - 2, i + 1])
-        # --->  Locating the position of q
-        j = np.argmin(np.abs(q - self.qq))
-        if q < self.qq[j]:
-            j = np.max([0, j - 1])
-        if q > self.qq[j + 1]:
-            j = np.min([self.Nq - 2, j + 1])
-
-        u = (lc - self.log_chi[i]) * self.dchi[i]
-        u1 = 1.0 - u
-        v = (q - self.qq[j]) * self.dq[j]
-        v1 = 1.0 - v
-
-        if chtab is None:
-            chtab = self.jTable
-
-        if (lx < self.log_xi_min[i]) | (lx < self.log_xi_min[i + 1]):
-            emiss = C.lzero
-        else:
-            coefs = chtab[(j + i * self.Nq) * self.Ng:(1 + j + i * self.Nq) * self.Ng]
-            valij = misc.chebev(lx, coefs, self.log_xi_min[i + 1], 0.0)
-            coefs = chtab[((j - 1) + i * self.Nq) * self.Ng:(j + i * self.Nq) * self.Ng]
-            valijp = misc.chebev(lx, coefs, self.log_xi_min[i + 1], 0.0)
-            coefs = chtab[((j - 1) + (i - 1) * self.Nq) * self.Ng:(j + (i - 1) * self.Nq) * self.Ng]
-            valipjp = misc.chebev(lx, coefs, self.log_xi_min[i], 0.0)
-            coefs = chtab[(j + (i - 1) * self.Nq) * self.Ng:(1 + j + (i - 1) * self.Nq) * self.Ng]
-            valipj = misc.chebev(lx, coefs, self.log_xi_min[i + 1], 0.0)
-            emiss = u1 * v1 * valipjp + u * v1 * valijp + u1 * v * valipj + u * v * valij
-        return np.maximum(C.lzero, emiss)
-
-    #
-    #  ###### #    # #  ####   ####  # #    # # ##### #   #
-    #  #      ##  ## # #      #      # #    # #   #    # #
-    #  #####  # ## # #  ####   ####  # #    # #   #     #
-    #  #      #    # #      #      # # #    # #   #     #
-    #  #      #    # # #    # #    # #  #  #  #   #     #
-    #  ###### #    # #  ####   ####  #   ##   #   #     #
-    def j_mb(self, nu, B, n0, gmin, gmax, qind, jmbtab=None):
-        '''Description:
-        This function reproduces the MBS emissivity from a power-law distribution.
-        '''
-        MBS = mbs()
-
-        def f(g, c=1.0, q=2.5):
-            Xc = 2.0 * c / (3.0 * g**2)
-            return g**(1.0 - q) * MBS.RMAfit(Xc, g)
-
-        lf = pwlf.logFuncs()
-
-        jmbc = 0.125 * C.jmbConst
-        nuB = C.nuConst * B
-        chi = nu / nuB
-        lchi = np.log(chi)
-        lxi_min = np.log(gmin / self.globGmax)
-        lxi_max = np.log(gmax / self.globGmax)
-
-        if jmbtab is None:
-            jmbtab = self.jTable
-
-        if lchi < self.log_chi[0]:
-            return "j_mb: input nu below table nu_min"
-
-        i = np.argmin(np.abs(lchi - self.log_chi))
-        if self.log_xi_min[i] >= lxi_max:
-            return 0.0
-        elif (self.log_xi_min[i] >= lxi_min) & (self.log_xi_min[i] < lxi_max):
-            I3min = np.exp(self.I3_interp(lchi, self.log_xi_min[i], qind, chtab=jmbtab))
-            I3max = np.exp(self.I3_interp(lchi, lxi_max, qind, chtab=jmbtab))
-        else:
-            I3min = np.exp(self.I3_interp(lchi, lxi_min, qind, chtab=jmbtab))
-            I3max = np.exp(self.I3_interp(lchi, lxi_max, qind, chtab=jmbtab))
-
-        I3diff = I3min - I3max
-        I3rel = np.abs(I3diff) / np.abs(I3min)
-
-        if (I3rel < 1e-3) | (I3diff < 0.0):
-            I2 = C.chunche_c100g20 * integrate.romberg(f, gmin, gmax, args=(chi, qind), divmax=12)
-        else:
-            if 0.5 * lf.log2(self.globGmax, 1e-6) * (qind - 1.0)**2 < 1e-3:
-                I2 = (1.0 - lf.log1(self.globGmax, 1e-9) * (qind - 1.0)) * I3diff
-            else:
-                I2 = self.globGmax**(1.0 - qind) * I3diff
-
-        return jmbc * nuB * n0 * I2 * gmin**qind
-
-    #
-    #    ##   #####   ####   ####  #####  #####  ##### #  ####  #    #
-    #   #  #  #    # #      #    # #    # #    #   #   # #    # ##   #
-    #  #    # #####   ####  #    # #    # #    #   #   # #    # # #  #
-    #  ###### #    #      # #    # #####  #####    #   # #    # #  # #
-    #  #    # #    # #    # #    # #   #  #        #   # #    # #   ##
-    #  #    # #####   ####   ####  #    # #        #   #  ####  #    #
-    def a_mb(self, nu, B, n0, gmin, gmax, qind, ambtab=None):
-        '''Description:
-        This function reproduces the MBS absorption from a power-law distribution.
-        '''
-        MBS = mbs()
-
-        def f(g, c=1.0, q=2.5):
-            Xc = 2.0 * c / (3.0 * g**2)
-            return g**(-q) * MBS.RMAfit(Xc, g) * (q + 1.0 + (g**2 / (g**2 - 1.0)))
-        lf = pwlf.logFuncs()
-
-        ambc = 3.90625e-3 * C.ambConst
-        nuB = C.nuConst * B
-        chi = nu / nuB
-        lchi = np.log(chi)
-        lxi_min = np.log(gmin / self.globGmax)
-        lxi_max = np.log(gmax / self.globGmax)
-
-        if ambtab is None:
-            ambtab = self.aTable
-
-        if lchi < self.log_chi[0]:
-            return "a_mb: input nu below table nu_min"
-
-        i = np.argmin(np.abs(lchi - self.log_chi))
-        if self.log_xi_min[i] >= lxi_max:
-            return 0.0
-        elif (self.log_xi_min[i] >= lxi_min) & (self.log_xi_min[i] < lxi_max):
-            A3min = np.exp(self.I3_interp(lchi, self.log_xi_min[i], qind, chtab=ambtab))
-            A3max = np.exp(self.I3_interp(lchi, lxi_max, qind, chtab=ambtab))
-        else:
-            A3min = np.exp(self.I3_interp(lchi, lxi_min, qind, chtab=ambtab))
-            A3max = np.exp(self.I3_interp(lchi, lxi_max, qind, chtab=ambtab))
-
-        A3diff = A3min - A3max
-        A3rel = np.abs(A3diff) / np.abs(A3min)
-
-        if (A3rel < 1e-3) | (A3diff < 0.0):
-            # A2 = 0.0
-            A2 = integrate.romberg(f, gmin, gmax, args=(chi, qind))
-        else:
-            if 0.5 * lf.log2(self.globGmax, 1e-6) * (qind - 1.0)**2 < 1e-3:
-                A2 = (1.0 - lf.log1(self.globGmax, 1e-9) * (qind - 1.0)) * A3diff
-            else:
-                A2 = self.globGmax**(1.0 - qind) * A3diff
-
-        # A2 = integrate.romberg(f, gmin, gmax, args=(chi, qind), divmax=12)
-
-        return ambc * nuB * n0 * A2 * gmin**qind / nu**2
+    return ambc * nuB * n0 * A2 * gmin**qind / nu**2
