@@ -53,8 +53,22 @@ def opt_depth(absor, R):
     return u
 
 
-def intensity(jnu, anu, R):
+def intensity_blob(jnu, anu, R):
     Inu = np.zeros_like(jnu)
     for i in range(jnu.size):
-        Inu[i] = R * jnu[i] * opt_depth(anu[i], R)
+        Inu[i] = 2. * R * jnu[i] * opt_depth(anu[i], R)
+    return Inu
+
+
+def intensity_slab(jnu, anu, s):
+    tau = anu * s
+    Inu = np.zeros_like(jnu)
+    for j in range(jnu.size):
+        if (jnu[j] > 1e-100):
+            if (tau[j] > 1e-50):
+                Inu[j] = s * jnu[j] * (1. - np.exp(-tau[j])) / tau[j]
+            else:
+                Inu[j] = s * jnu[j]
+        else:
+            Inu[j] = 0.
     return Inu
